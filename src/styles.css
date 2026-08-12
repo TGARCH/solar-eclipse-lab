@@ -30,3 +30,33 @@
 .axis-legend{color:#8cc9b8!important}.axis-z{width:4px!important;height:14px!important;background:#55d2ae!important}
 .bim-mode .panel{max-height:calc(100% - 36px);overflow:auto;scrollbar-width:thin;scrollbar-color:#31505a transparent}
 @media(max-width:850px){.project-meta{display:none}.energy-hero strong{font-size:28px}.energy-metrics{grid-template-columns:1fr 1fr 1fr}}
+
+
+/* IFC document data workflow */
+.data-hub .stage{height:78vh;min-height:680px}
+.data-hub .panel{width:min(480px,calc(100% - 36px))}
+.workflow-panel{padding:18px}
+.workflow-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.workflow-head h2{font-size:22px;margin-bottom:12px}
+.sheet-target{font-size:9px;letter-spacing:.14em;color:#79dec1;border:1px solid #31575b;border-radius:7px;padding:6px 8px;background:#102428}
+.workflow-tabs{display:flex;gap:4px;overflow-x:auto;padding:0 0 9px;margin-bottom:6px;scrollbar-width:none}
+.workflow-tabs button{flex:0 0 auto;border:1px solid #29434c;background:#0b171e;color:#789198;border-radius:8px;padding:7px 9px;font-size:9px}
+.workflow-tabs button.on{background:#dcecea;color:#0a161a;border-color:#dcecea;font-weight:700}
+.workflow-content{display:grid;gap:12px}
+.field-group{border:1px solid #263f47;border-radius:12px;overflow:hidden;background:#09151b}
+.field-group h3{margin:0;padding:9px 11px;background:#102129;color:#9bb5b8;font-size:9px;letter-spacing:.15em;text-transform:uppercase}
+.mapping-field{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;padding:9px 11px;border-top:1px solid #1e333a}
+.mapping-field:first-of-type{border-top:0}
+.mapping-field>div{min-width:0}.mapping-field span{display:block;color:#82999f;font-size:9px;margin-bottom:3px}.mapping-field b{display:block;color:#e1eaea;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapping-field b.missing{color:#d6a35e}.mapping-field b.ifc{color:#dff5ee}
+.mapping-field>i{align-self:start;font-style:normal;border-radius:99px;padding:3px 6px;font-size:7px;letter-spacing:.08em;background:#26353b;color:#aab9bc}
+.mapping-field>i.ifc{background:#173d35;color:#7ce0be}.mapping-field>i.derived{background:#193753;color:#82bce9}.mapping-field>i.assumption{background:#46341c;color:#e7b86d}.mapping-field>i.missing{background:#412529;color:#e7979d}.mapping-field>i.manual{background:#353248;color:#bbb2e8}
+.mapping-field small,.mapping-field code{font-size:8px;margin-top:5px;color:#59737b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mapping-field code{text-align:right;color:#6a8289}
+.export-view{display:grid;gap:10px}
+.export-score{border:1px solid #31555b;border-radius:13px;padding:14px;background:linear-gradient(135deg,#10262b,#0b171d)}
+.export-score>span{font-size:8px;letter-spacing:.16em;color:#769b9c}.export-score strong{display:block;font-family:"Space Grotesk";font-size:32px;color:#79dec1;margin:6px 0}.export-score strong small{font-size:13px;color:#81989c}.export-score>div{height:4px;background:#20363c;border-radius:9px;overflow:hidden}.export-score>div i{display:block;height:100%;background:#63d5b4}.export-score p{font-size:9px;margin:9px 0 0;color:#82979b}
+.export-button,.sheet-link{display:block;width:100%;border-radius:9px;padding:10px;text-align:center;font-size:10px;font-weight:700;text-decoration:none}
+.export-button{border:0;background:#dcecea;color:#091519}.sheet-link{border:1px solid #31505a;color:#9ed6c7}
+.doc-label{margin:8px 0 0}.doc-links{display:grid;grid-template-columns:1fr 1fr;gap:6px}.doc-links a{display:grid;grid-template-columns:1fr auto;text-decoration:none;border:1px solid #29434c;border-radius:9px;padding:9px;color:#dce8e8;background:#0b171e}.doc-links b{font-size:11px}.doc-links span{grid-column:1;font-size:8px;color:#718990;margin-top:2px}.doc-links em{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;color:#64c6aa}
+.mapping-note{display:grid;gap:4px;border-left:2px solid #62cda8;padding:9px 10px;background:#0d191d;border-radius:6px}.mapping-note b{font-size:10px}.mapping-note span{font-size:9px;line-height:1.5;color:#81959a}
+@media(max-width:850px){.data-hub .stage{min-height:760px}.data-hub .panel{width:calc(100% - 20px);max-height:58%}.workflow-head h2{font-size:19px}.mapping-field{padding:8px 9px}}
