@@ -18,3 +18,15 @@
 .bim-mode .status i.live{background:#57d8b5;box-shadow:0 0 10px #57d8b5}
 .bim-mode .legend{color:#78949c}
 @media(max-width:850px){.tabs button{padding:9px 7px;font-size:11px}.bim-mode .panel{max-height:55%}}
+
+/* IFC Building Lab */
+.project-meta{display:grid;justify-items:end;gap:4px;padding:10px 13px;border:1px solid #29434c;border-radius:11px;background:#09131a}.project-meta span{font-size:9px;letter-spacing:.18em;color:#6e939d}.project-meta b{font-size:12px;color:#d9e8e7}
+.panel-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:0 0 13px}.panel-tabs button{border:1px solid #29434c;background:#0b171e;color:#79939b;border-radius:8px;padding:8px;font-size:10px}.panel-tabs button.on{background:#dcecea;color:#0a161a;border-color:#dcecea}
+.energy-hero{display:grid;grid-template-columns:1fr auto;align-items:end;border:1px solid #31555b;border-radius:13px;padding:13px;background:linear-gradient(135deg,#10262b,#0b171d);margin-bottom:9px}.energy-hero>span{grid-column:1/-1;font-size:9px;letter-spacing:.15em;color:#6d9799}.energy-hero strong{font-family:"Space Grotesk";font-size:35px;line-height:1;color:#79dec1;margin-top:7px}.energy-hero>b{font-size:10px;color:#99b0b2;padding-bottom:4px}.energy-hero small{grid-column:1/-1;margin-top:6px;color:#6e858a;font-size:9px}
+.energy-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}.energy-metrics div{padding:9px 7px;border:1px solid #263e46;border-radius:9px;background:#0b171d}.energy-metrics span{display:block;color:#6f898f;font-size:8px;min-height:20px}.energy-metrics b{font-size:12px;color:#e2ecec}
+.data-rows{display:grid;gap:1px;margin-bottom:12px}.data-rows>div{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1d333a;padding:6px 2px;font-size:10px}.data-rows span{color:#82999f}.data-rows b{color:#dae6e6;font-weight:600}
+.assumption{border-left:2px solid #d3a256;background:#171a19;color:#9b9e95;border-radius:7px;padding:9px 10px;font-size:9px;line-height:1.5}
+.audit-score{border:1px solid #34464c;border-radius:11px;padding:11px;background:#10191d}.audit-score span{font-size:8px;letter-spacing:.16em;color:#788e93}.audit-score strong{display:block;margin:5px 0;font-size:14px}.audit-score p{margin:0;font-size:9px;color:#78898e}.audit-list{display:grid;gap:5px;margin:10px 0}.audit-list>div{display:grid;grid-template-columns:8px 1fr;gap:8px;align-items:start;padding:7px 8px;background:#0b171d;border-radius:8px}.audit-list i{width:7px;height:7px;margin-top:3px;border-radius:50%;background:#d39a52}.audit-list i.unknown{background:#81939c}.audit-list i.ok{background:#62cda8}.audit-list b{display:block;font-size:10px;color:#dce7e7}.audit-list span{font-size:9px;color:#74898f}
+.axis-legend{color:#8cc9b8!important}.axis-z{width:4px!important;height:14px!important;background:#55d2ae!important}
+.bim-mode .panel{max-height:calc(100% - 36px);overflow:auto;scrollbar-width:thin;scrollbar-color:#31505a transparent}
+@media(max-width:850px){.project-meta{display:none}.energy-hero strong{font-size:28px}.energy-metrics{grid-template-columns:1fr 1fr 1fr}}
