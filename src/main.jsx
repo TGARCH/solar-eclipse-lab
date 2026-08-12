@@ -42,10 +42,10 @@ function EarthMaterial() {
   return <meshStandardMaterial map={map} roughness={.82} metalness={0}/>
 }
 
-function EarthMoonSystem({ earthRadius, running, speed }) {
+function EarthMoonSystem({ earthRadius, running, speed, trueScale=false }) {
   const orbit = useRef()
   const moonRadius = earthRadius * .2724
-  const visualDistance = earthRadius * 4.6
+  const visualDistance = earthRadius * (trueScale ? 60.3 : 4.6)
   const inclination = THREE.MathUtils.degToRad(5.145)
   const orbitPoints = useMemo(() => Array.from({length:129},(_,i)=>{
     const a=i/128*Math.PI*2
@@ -75,20 +75,19 @@ function Planet({ body, distance, running, speed, selected, select, earthAnchor 
   })
   return <group ref={orbit}>
     <group ref={body.name==='Ziemia'?earthAnchor:undefined} position={[distance, 0, 0]}>
-      <mesh ref={spin} rotation={body.name==='Ziemia'?[0,0,THREE.MathUtils.degToRad(23.44)]:[0,0,0]} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
-        <sphereGeometry args={[radius, 40, 40]}/>
-        {body.name==='Ziemia'?<EarthMaterial/>:<meshStandardMaterial color={body.color} roughness={.78}/>}
-      </mesh>
+      {body.name==='Ziemia' ? <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+        <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
+          <sphereGeometry args={[radius,48,48]}/><EarthMaterial/>
+        </mesh>
+        <Line points={[[0,-radius*1.55,0],[0,radius*1.55,0]]} color="#9bc6ef" transparent opacity={.72} lineWidth={1}/>
+      </group> : <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
+        <sphereGeometry args={[radius,40,40]}/><meshStandardMaterial color={body.color} roughness={.78}/>
+      </mesh>}
       {body.name === 'Saturn' && <mesh rotation={[Math.PI/2,0,0]} castShadow receiveShadow>
         <ringGeometry args={[radius*1.25,radius*1.9,80]}/>
         <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
-      {body.name === 'Ziemia' && <>
-        <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-          <Line points={[[0,-radius*1.55,0],[0,radius*1.55,0]]} color="#9bc6ef" transparent opacity={.72} lineWidth={1}/>
-        </group>
-        <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>
-      </>} 
+      {body.name === 'Ziemia' && <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>} 
       {selected === body.name && <Html center position={[0,radius+.38,0]}><div className="tag">{body.name}</div></Html>}
     </group>
   </group>
@@ -164,6 +163,28 @@ function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
     })}
     <SystemEarthRig active={cameraMode==='earth'} anchor={earthAnchor}/>
     {cameraMode === 'global' && <OrbitControls makeDefault enableDamping minDistance={3} maxDistance={maxOrbit*2.2}/>}
+  </>
+}
+
+function TrueScaleEarthMoon({ running, speed, cameraMode }) {
+  const earthAnchor = useRef()
+  const earthSpin = useRef()
+  const earthRadius = 1
+  useFrame((_,dt)=>{ if (running && earthSpin.current) earthSpin.current.rotation.y += dt*speed*.28 })
+  return <>
+    <ambientLight intensity={.06}/>
+    <directionalLight position={[-12,1,0]} intensity={3.2} color="#fff1cf"/>
+    <group ref={earthAnchor}>
+      <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+        <mesh ref={earthSpin} castShadow receiveShadow>
+          <sphereGeometry args={[earthRadius,64,64]}/><EarthMaterial/>
+        </mesh>
+        <Line points={[[0,-1.55,0],[0,1.55,0]]} color="#9bc6ef" transparent opacity={.8}/>
+      </group>
+      <EarthMoonSystem earthRadius={earthRadius} running={running} speed={speed} trueScale/>
+    </group>
+    <SystemEarthRig active={cameraMode==='earth'} anchor={earthAnchor}/>
+    {cameraMode==='global' && <OrbitControls makeDefault target={[0,0,0]} enableDamping minDistance={2.2} maxDistance={110}/>}
   </>
 }
 
@@ -307,16 +328,17 @@ function EclipseScene({ type, phase, cameraMode, showVolume }) {
 }
 
 function ScaleLegend({ scale }) {
+  const real = scale==='true'
   return <div className="scale-note">
     <span>SKALA WIDOKU</span>
-    <strong>{scale === 'astronomical' ? 'Względna / astronomiczna' : 'Czytelna / skompresowana'}</strong>
-    <p>Promienie planet i okresy obiegu zachowują relacje danych astronomicznych. Odległości są {scale === 'astronomical' ? 'mapowane logarytmicznie względem AU' : 'skompresowane funkcją potęgową'}, aby 30,07 AU mieściło się na ekranie.</p>
+    <strong>{real?'1:1 · Ziemia–Księżyc':'Schemat · cały układ'}</strong>
+    <p>{real?'Promienie i średnia odległość 60,3 R⊕ są liniowe. Pozostałe planety ukryto, ponieważ w tej samej skali nie zmieściłyby się w czytelnym kadrze.':'Rozmiary i odległości są jawnie skompresowane; okresy obiegu zachowują relacje astronomiczne.'}</p>
   </div>
 }
 
 function App() {
   const [view,setView] = useState('system')
-  const [scale,setScale] = useState('compressed')
+  const [scale,setScale] = useState('schematic')
   const [running,setRunning] = useState(true)
   const [speed,setSpeed] = useState(1)
   const [selected,setSelected] = useState('Ziemia')
@@ -338,7 +360,7 @@ function App() {
         <color attach="background" args={['#03060c']}/><fog attach="fog" args={['#03060c',42,105]}/>
         <Stars radius={95} depth={45} count={2600} factor={3} saturation={0}/>
         <Suspense fallback={null}>{view==='system'
-          ? <SolarSystem running={running} speed={speed} scale={scale} selected={selected} select={setSelected} cameraMode={cameraMode}/>
+          ? (scale==='true' ? <TrueScaleEarthMoon running={running} speed={speed} cameraMode={cameraMode}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
           : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
         </Suspense>
       </Canvas>
@@ -346,7 +368,7 @@ function App() {
       <aside className="panel">
         {view==='system' ? <>
           <span className="section-kicker">MODEL DANYCH</span><h2>Proporcje, które można odczytać</h2>
-          <div className="segmented"><button className={scale==='compressed'?'on':''} onClick={()=>setScale('compressed')}>Czytelna</button><button className={scale==='astronomical'?'on':''} onClick={()=>setScale('astronomical')}>Astronomiczna</button></div>
+          <div className="segmented"><button className={scale==='schematic'?'on':''} onClick={()=>setScale('schematic')}>Schemat</button><button className={scale==='true'?'on':''} onClick={()=>{setScale('true');setSelected('Ziemia')}}>1:1</button></div>
           <ScaleLegend scale={scale}/>
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
