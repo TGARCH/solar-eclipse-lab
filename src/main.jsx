@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Line, OrbitControls, PerspectiveCamera, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import IfcViewer from './IfcViewer'
 import './styles.css'
 
 const AU_KM = 149597870.7
@@ -413,8 +414,13 @@ function ScaleLegend({ scale }) {
   </div>
 }
 
+const IFC_CATEGORIES = [
+  ['Ściany', 1], ['Płyty / stropy', 5], ['Dachy', 1],
+  ['Drzwi', 1], ['Okna', 1], ['Otwory', 2]
+]
+
 function App() {
-  const [view,setView] = useState('system')
+  const [view,setView] = useState('bim')
   const [scale,setScale] = useState('schematic')
   const [running,setRunning] = useState(true)
   const [speed,setSpeed] = useState(1)
@@ -424,30 +430,50 @@ function App() {
   const [cameraMode,setCameraMode] = useState('global')
   const [showVolume,setShowVolume] = useState(true)
   const [trueFocus,setTrueFocus] = useState('Przegląd')
+  const [selectedIfc,setSelectedIfc] = useState(null)
+  const [ifcState,setIfcState] = useState({status:'Oczekiwanie na model',error:null,meshes:0})
+  const handleIfcState = useCallback(update => setIfcState(previous => ({...previous,...update})), [])
   const chosen = PLANETS.find(p=>p.name===selected)
-  return <main>
+  const isBim = view === 'bim'
+  return <main className={isBim?'bim-mode':''}>
     <header>
-      <div><span className="eyebrow">ORBITAL MECHANICS · INTERACTIVE 3D</span><h1>Solar <em>Eclipse Lab</em></h1></div>
+      <div><span className="eyebrow">{isBim?'OPEN BIM · IFC4 REFERENCE VIEW':'ORBITAL MECHANICS · INTERACTIVE 3D'}</span><h1>{isBim?<>IFC <em>Model Lab</em></>:<>Solar <em>Eclipse Lab</em></>}</h1></div>
       <nav className="tabs" aria-label="Widok">
+        <button className={view==='bim'?'active':''} onClick={()=>setView('bim')}>Model IFC</button>
         <button className={view==='system'?'active':''} onClick={()=>{setView('system');setCameraMode('global')}}>Układ Słoneczny</button>
-        <button className={view==='eclipse'?'active':''} onClick={()=>{setView('eclipse');setCameraMode('global')}}>Laboratorium zaćmień</button>
+        <button className={view==='eclipse'?'active':''} onClick={()=>{setView('eclipse');setCameraMode('global')}}>Zaćmienia</button>
       </nav>
     </header>
     <section className="stage">
-      <Canvas shadows dpr={[1,1.75]} camera={{position:view==='system'?[18,14,22]:[17,9,18],fov:46}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
-        <color attach="background" args={['#03060c']}/><fog attach="fog" args={['#03060c',42,105]}/>
-        <Suspense fallback={null}>{view==='system'
-          ? (scale==='true' ? <TrueScaleSolarSystem running={running} speed={speed} focus={trueFocus} setFocus={setTrueFocus}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
-          : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
+      <Canvas shadows dpr={[1,1.75]} camera={{position:isBim?[10,8,12]:view==='system'?[18,14,22]:[17,9,18],fov:46}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
+        <color attach="background" args={[isBim?'#0a1118':'#03060c']}/>
+        {!isBim&&<fog attach="fog" args={['#03060c',42,105]}/>}
+        <Suspense fallback={null}>{isBim
+          ? <IfcViewer selectedId={selectedIfc?.id} onSelect={setSelectedIfc} onState={handleIfcState}/>
+          : view==='system'
+            ? (scale==='true' ? <TrueScaleSolarSystem running={running} speed={speed} focus={trueFocus} setFocus={setTrueFocus}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
+            : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
         </Suspense>
       </Canvas>
-      <div className="status"><i className={running?'live':''}/>{view==='system'?(running?'SYMULACJA AKTYWNA':'PAUZA'):(eclipse==='solar'?'ZAĆMIENIE SŁOŃCA':'ZAĆMIENIE KSIĘŻYCA')}</div>
+      <div className="status"><i className={!ifcState.error&&(isBim||running)?'live':''}/>{isBim?ifcState.status:view==='system'?(running?'SYMULACJA AKTYWNA':'PAUZA'):(eclipse==='solar'?'ZAĆMIENIE SŁOŃCA':'ZAĆMIENIE KSIĘŻYCA')}</div>
       {view==='system'&&scale==='true'&&<nav className="screen-navigator" aria-label="Nawigator obiektów w skali 1:1">
         <span>PRZEJDŹ DO</span>
         <div>{['Przegląd','Słońce','Merkury','Wenus','Ziemia','Księżyc','Mars','Jowisz','Saturn','Uran','Neptun'].map(name=><button key={name} className={trueFocus===name?'on':''} onClick={()=>setTrueFocus(name)}>{name}</button>)}</div>
       </nav>}
       <aside className="panel">
-        {view==='system' ? <>
+        {isBim ? <>
+          <span className="section-kicker">ŹRÓDŁO · TEST.IFC</span><h2>Dane wygenerowane z IFC</h2>
+          <div className="ifc-file"><div><b>IFC4</b><span>ReferenceView V1.1</span></div><strong>38,8 KB</strong></div>
+          <div className="facts ifc-facts"><div><span>Kondygnacje</span><b>2</b></div><div><span>Zestawy właściwości</span><b>37</b></div><div><span>Bryły wyciągane</span><b>15</b></div><div><span>Siatki w scenie</span><b>{ifcState.meshes||'—'}</b></div></div>
+          <div className="ifc-tree"><span className="data-title">ELEMENTY MODELU</span>{IFC_CATEGORIES.map(([name,count])=><div key={name}><span>{name}</span><b>{count}</b></div>)}</div>
+          <div className="storeys"><span className="data-title">STRUKTURA PRZESTRZENNA</span><div><b>Poziom 2</b><span>+4 000 mm</span></div><div><b>Poziom 1</b><span>±0 mm</span></div></div>
+          <div className={'ifc-selection '+(selectedIfc?'selected':'')}>
+            <span className="data-title">WYBRANY ELEMENT</span>
+            {selectedIfc?<><strong>{selectedIfc.name}</strong><span>{selectedIfc.type} · #{selectedIfc.id}</span><code>{selectedIfc.globalId}</code></>:<p>Kliknij element modelu, aby odczytać jego dane IFC.</p>}
+          </div>
+          {ifcState.error&&<div className="ifc-error">{ifcState.error}</div>}
+          <a className="download-ifc" href="/models/test.ifc" download>Pobierz źródłowy plik IFC</a>
+        </> : view==='system' ? <>
           <span className="section-kicker">MODEL DANYCH</span><h2>Proporcje, które można odczytać</h2>
           <div className="segmented"><button className={scale==='schematic'?'on':''} onClick={()=>setScale('schematic')}>Schemat</button><button className={scale==='true'?'on':''} onClick={()=>{setScale('true');setSelected('Ziemia')}}>1:1</button></div>
           <ScaleLegend scale={scale}/>
@@ -462,11 +488,11 @@ function App() {
           <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
           <div className="callout">Skala widoku jest skompresowana, lecz cień korzysta z osobnej skali optycznej: 60,3 promienia Ziemi do Księżyca i 23 455 do Słońca. Plama oraz stożki wynikają z tego samego obliczenia.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
         </>}
-        {!(view==='system'&&scale==='true')&&<div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>}{cameraMode==='earth' && !(view==='system'&&scale==='true') && <div className="camera-help"><b>Nawigacja względem Ziemi</b><span>Przeciągnij — orbita · kółko — zbliżenie</span></div>}
+        {!isBim&&!(view==='system'&&scale==='true')&&<div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>}
       </aside>
-      <div className="legend"><span><i className="umbra"/>Umbra</span><span><i className="penumbra"/>Penumbra</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></div>
+      <div className="legend">{isBim?<><span>Kliknij · dane elementu</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></>:<><span><i className="umbra"/>Umbra</span><span><i className="penumbra"/>Penumbra</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></>}</div>
     </section>
-    <footer><span>THREE.JS / R3F · PHYSICALLY BASED SHADOWS</span><span>Dane: średnie promienie i okresy orbitalne · epoka poglądowa</span></footer>
+    <footer><span>{isBim?'WEB-IFC / THREE.JS · INTERAKTYWNY MODEL BIM':'THREE.JS / R3F · PHYSICALLY BASED SHADOWS'}</span><span>{isBim?'Źródło: Autodesk Revit LT 2020 · jednostki: mm':'Dane: średnie promienie i okresy orbitalne · epoka poglądowa'}</span></footer>
   </main>
 }
 createRoot(document.getElementById('root')).render(<App/>)
