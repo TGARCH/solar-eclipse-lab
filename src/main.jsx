@@ -214,7 +214,7 @@ function EclipseScene({ type, phase, cameraMode, showVolume }) {
             ? <EclipseSurface color="#73aee8" sun={sun} occulter={moon} direction={direction} occulterRadius={moonR} opticalScale={opticalScale} opticalSourceDistance={opticalSourceDistance}/>
             : <meshStandardMaterial color="#2867bb" roughness={.86}/>}
         </mesh>
-        <PerspectiveCamera ref={captureCamera} position={[0,2.7,8.5]} near={.08} far={120} fov={42} onUpdate={camera=>camera.lookAt(0,0,0)}/>
+        <PerspectiveCamera ref={captureCamera} position={[0,1.1,4.4]} near={.05} far={120} fov={40} onUpdate={camera=>camera.lookAt(0,0,0)}/>
       </group>
       <mesh position={moonLocal}>
         <sphereGeometry args={[moonR,64,64]}/>
@@ -230,7 +230,7 @@ function EclipseScene({ type, phase, cameraMode, showVolume }) {
     <Line points={[sun.toArray(),earth.toArray()]} color="#ffcb66" transparent opacity={.17}/>
     <CameraSwitch mode={cameraMode} earthCamera={attachedCamera}/>
     {cameraMode === 'global' && <OrbitControls makeDefault target={[2,0,0]} enableDamping minDistance={5} maxDistance={75}/>}
-    {cameraMode === 'earth' && rigCamera && <OrbitControls makeDefault camera={rigCamera} target={[0,0,0]} enableDamping enablePan={false} minDistance={5.8} maxDistance={13} minPolarAngle={.55} maxPolarAngle={2.35} rotateSpeed={.35}/>}
+    {cameraMode === 'earth' && rigCamera && <OrbitControls makeDefault camera={rigCamera} target={[0,0,0]} enableDamping dampingFactor={.08} enableRotate enableZoom zoomToCursor enablePan={false} minDistance={2.15} maxDistance={11} minPolarAngle={.28} maxPolarAngle={2.86} rotateSpeed={.5} zoomSpeed={.75}/>}
   </>
 }
 
@@ -287,7 +287,7 @@ function App() {
           <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
           <div className="callout">Skala widoku jest skompresowana, lecz cień korzysta z osobnej skali optycznej: 60,3 promienia Ziemi do Księżyca i 23 455 do Słońca. Plama oraz stożki wynikają z tego samego obliczenia.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
         </>}
-        <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>
+        <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>{cameraMode==='earth' && <div className="camera-help"><b>Nawigacja względem Ziemi</b><span>Przeciągnij — orbita · kółko — zbliżenie</span></div>}
       </aside>
       <div className="legend"><span><i className="umbra"/>Umbra</span><span><i className="penumbra"/>Penumbra</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></div>
     </section>
