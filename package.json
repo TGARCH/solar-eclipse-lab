@@ -1,6 +1,6 @@
 {
   "name": "solar-eclipse-lab",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,8 @@
     "react-dom": "latest",
     "three": "latest",
     "@react-three/fiber": "latest",
-    "@react-three/drei": "latest"
+    "@react-three/drei": "latest",
+    "web-ifc": "0.0.78"
   },
   "devDependencies": {}
 }
