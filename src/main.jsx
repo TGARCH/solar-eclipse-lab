@@ -39,7 +39,7 @@ function App() {
       <div className="project-meta"><span>TEST3.IFC</span><b>Model roboczy</b></div>
     </header>
     <section className="stage">
-      <Canvas shadows dpr={[1,1.75]} camera={{position:[11,-14,8],fov:46,up:[0,0,1]}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
+      <Canvas shadows dpr={[1,1.75]} camera={{position:[11,8,14],fov:46}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
         <color attach="background" args={['#0a1118']}/>
         <Suspense fallback={null}><IfcViewer selectedId={selectedIfc?.id} onSelect={setSelectedIfc} onState={handleIfcState}/></Suspense>
       </Canvas>
@@ -60,7 +60,7 @@ function App() {
           <div className="assumption">Wartości U zapisane testowo w IFC są pomijane. Wyniki są poglądowe i dotyczą wyłącznie wyeksportowanej strefy 13,03 m².</div>
         </>}
         {section==='geometry'&&<>
-          <div className="ifc-file"><div><b>IFC4</b><span>Reference View · Z jest osią pionową</span></div><strong>{ifcState.meshes||'—'} siatek</strong></div>
+          <div className="ifc-file"><div><b>IFC4</b><span>Reference View · Y jest osią pionową widoku</span></div><strong>{ifcState.meshes||'—'} siatek</strong></div>
           <DataRows rows={IFC_DATA.source}/>
           <div className="storeys"><span className="data-title">STRUKTURA</span><div><b>Strefa ogrzewana</b><span>21°C</span></div><div><b>Poziom 2</b><span>+4 000 mm</span></div><div><b>Poziom 1</b><span>±0 mm</span></div></div>
         </>}
@@ -75,9 +75,9 @@ function App() {
         </div>
         {ifcState.error&&<div className="ifc-error">{ifcState.error}</div>}
       </aside>
-      <div className="legend"><span>Kliknij · dane elementu</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span><span className="axis-legend"><i className="axis-z"/>Z · pion</span></div>
+      <div className="legend"><span>Kliknij · dane elementu</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span><span className="axis-legend"><i className="axis-z"/>Y · pion</span></div>
     </section>
-    <footer><span>WEB-IFC / THREE.JS · NATYWNY UKŁAD WSPÓŁRZĘDNYCH</span><span>Dane energetyczne · wariant roboczy</span></footer>
+    <footer><span>WEB-IFC / THREE.JS · UKŁAD WIDOKU THREE.JS · Y-UP</span><span>Dane energetyczne · wariant roboczy</span></footer>
   </main>
 }
 createRoot(document.getElementById('root')).render(<App/>)
