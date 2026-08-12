@@ -80,14 +80,14 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
         const sourceSize = box.getSize(new THREE.Vector3())
         const normalization = 7.2 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z)
         root.scale.setScalar(normalization)
-        root.position.set(-center.x * normalization, -center.y * normalization, -box.min.z * normalization)
+        root.position.set(-center.x * normalization, -box.min.y * normalization, -center.z * normalization)
         const size = sourceSize.multiplyScalar(normalization)
-        const targetZ = Math.max(1.2, size.z * .38)
-        camera.up.set(0, 0, 1)
-        camera.position.set(11.5, -14.5, 8.5)
+        const targetY = Math.max(1.2, size.y * .38)
+        camera.up.set(0, 1, 0)
+        camera.position.set(11.5, 8.5, 14.5)
         camera.near = .02
         camera.far = 250
-        camera.lookAt(0, 0, targetZ)
+        camera.lookAt(0, targetY, 0)
         camera.updateProjectionMatrix()
         if (!disposed) {
           setModel(root)
@@ -118,11 +118,11 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
     })
   }, [model, selectedId])
 
-  const target = useMemo(() => new THREE.Vector3(0, 0, 1.6), [])
+  const target = useMemo(() => new THREE.Vector3(0, 1.6, 0), [])
   return <>
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
     <directionalLight position={[12, 18, 10]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-.00015}/>
-    <gridHelper args={[80,80,'#5c7687','#273746']} rotation={[Math.PI/2,0,0]} position={[0,0,-.012]}/>
+    <gridHelper args={[80,80,'#5c7687','#273746']} position={[0,-.012,0]}/>
     {model && <primitive object={model} onPointerDown={event => {
       event.stopPropagation()
       const info = event.object.userData.info
