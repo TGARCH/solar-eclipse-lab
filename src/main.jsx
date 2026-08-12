@@ -1,133 +1,215 @@
 import React, { Suspense, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Stars, Line, Html } from '@react-three/drei'
+import { Html, Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import './styles.css'
 
-const planets = [
-  { name:'Merkury', r:0.12, orbit:4.1, speed:4.15, color:'#9d9a92' },
-  { name:'Wenus', r:0.19, orbit:5.8, speed:1.62, color:'#d7ae72' },
-  { name:'Ziemia', r:0.21, orbit:7.6, speed:1.0, color:'#4f87ff' },
-  { name:'Mars', r:0.15, orbit:9.7, speed:0.53, color:'#c45d3c' },
-  { name:'Jowisz', r:0.55, orbit:13.2, speed:0.084, color:'#d2a578' },
-  { name:'Saturn', r:0.48, orbit:17.0, speed:0.034, color:'#dbc88d' },
-  { name:'Uran', r:0.34, orbit:20.4, speed:0.012, color:'#9bd9dc' },
-  { name:'Neptun', r:0.33, orbit:23.6, speed:0.0061, color:'#4269d8' }
+const AU_KM = 149597870.7
+const EARTH_RADIUS_KM = 6371
+const DAY = 86400
+const PLANETS = [
+  { name:'Merkury', radius:2439.7, au:.387, period:87.969, color:'#9f9b91' },
+  { name:'Wenus', radius:6051.8, au:.723, period:224.701, color:'#d9ad72' },
+  { name:'Ziemia', radius:6371, au:1, period:365.256, color:'#3f7ee8' },
+  { name:'Mars', radius:3389.5, au:1.524, period:686.98, color:'#bd5537' },
+  { name:'Jowisz', radius:69911, au:5.203, period:4332.59, color:'#d0a078' },
+  { name:'Saturn', radius:58232, au:9.537, period:10759.22, color:'#d7c486' },
+  { name:'Uran', radius:25362, au:19.191, period:30688.5, color:'#8ed5da' },
+  { name:'Neptun', radius:24622, au:30.069, period:60182, color:'#4168d8' }
 ]
+const SUN_RADIUS = 696340
+const MOON_RADIUS = 1737.4
+const MOON_DISTANCE = 384400
 
-function OrbitRing({radius}) {
-  const pts = useMemo(() => Array.from({length:129},(_,i)=>{
-    const a = i/128*Math.PI*2
-    return [Math.cos(a)*radius,0,Math.sin(a)*radius]
-  }),[radius])
-  return <Line points={pts} color="#293143" transparent opacity={0.55} lineWidth={1}/>
+const distanceFor = (au, scale) => scale === 'astronomical' ? 3.25 + Math.log10(au / .387 + 1) * 17.2 : 3.5 + Math.pow(au, .42) * 4.35
+const radiusFor = km => .105 + Math.pow(km / EARTH_RADIUS_KM, .48) * .16
+
+function Orbit({ radius }) {
+  const points = useMemo(() => Array.from({length:161}, (_,i) => {
+    const a = i / 160 * Math.PI * 2
+    return [Math.cos(a) * radius, 0, Math.sin(a) * radius]
+  }), [radius])
+  return <Line points={points} color="#26334b" transparent opacity={.62} lineWidth={1}/>
 }
 
-function Planet({p, running, timeScale, selected, onSelect, earthRef}) {
-  const group = useRef()
-  const mesh = useRef()
-  useFrame((_,dt)=>{
-    if(running && group.current) group.current.rotation.y += dt * p.speed * 0.22 * timeScale
-    if(mesh.current) mesh.current.rotation.y += dt*0.35
+function Planet({ body, distance, running, speed, selected, select, earthCamera }) {
+  const orbit = useRef()
+  const spin = useRef()
+  const radius = radiusFor(body.radius)
+  useFrame((_, dt) => {
+    if (running) orbit.current.rotation.y += dt * speed * (365.256 / body.period) * .13
+    spin.current.rotation.y += dt * .28
   })
-  return <group ref={group}>
-    <group position={[p.orbit,0,0]}>
-      <mesh ref={mesh} onClick={(e)=>{e.stopPropagation();onSelect(p.name)}}>
-        <sphereGeometry args={[p.r,32,32]}/>
-        <meshStandardMaterial color={p.color} roughness={0.8} metalness={0.05}/>
+  return <group ref={orbit}>
+    <group position={[distance, 0, 0]}>
+      <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
+        <sphereGeometry args={[radius, 40, 40]}/>
+        <meshStandardMaterial color={body.color} roughness={.78}/>
       </mesh>
-      {p.name==='Saturn' && <mesh rotation={[Math.PI/2,0,0]}>
-        <ringGeometry args={[0.62,0.88,64]}/>
-        <meshBasicMaterial color="#c9b57f" side={THREE.DoubleSide} transparent opacity={0.72}/>
+      {body.name === 'Saturn' && <mesh rotation={[Math.PI/2,0,0]} castShadow receiveShadow>
+        <ringGeometry args={[radius*1.25,radius*1.9,80]}/>
+        <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
-      {selected===p.name && <Html distanceFactor={8}><div className="label3d">{p.name}</div></Html>}
-      {p.name==='Ziemia' && <EarthMoonSystem running={running} timeScale={timeScale} earthRef={earthRef} />}
+      {body.name === 'Ziemia' && <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+        <PerspectiveCamera ref={earthCamera} position={[1.25,.75,1.9]} fov={48}/>
+        <mesh position={[radius + .16,0,0]} castShadow receiveShadow>
+          <sphereGeometry args={[Math.max(.055,radius*.2724),24,24]}/>
+          <meshStandardMaterial color="#b8bdc5" roughness={1}/>
+        </mesh>
+      </group>}
+      {selected === body.name && <Html center position={[0,radius+.38,0]}><div className="tag">{body.name}</div></Html>}
     </group>
   </group>
 }
 
-function EarthMoonSystem({running,timeScale,earthRef}){
-  const moonOrbit = useRef()
-  useFrame((_,dt)=>{ if(running && moonOrbit.current) moonOrbit.current.rotation.y += dt*2.9*timeScale })
-  return <group ref={earthRef}>
-    <group ref={moonOrbit}>
-      <mesh position={[0.65,0,0]}>
-        <sphereGeometry args={[0.058,20,20]}/><meshStandardMaterial color="#cfd2d5" roughness={1}/>
+function CameraSwitch({ mode, earthCamera }) {
+  useFrame(({ set, camera }) => {
+    const target = mode === 'earth' ? earthCamera.current : null
+    if (target && camera !== target) set({ camera: target })
+  })
+  return null
+}
+
+function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
+  const earthCamera = useRef()
+  const maxOrbit = distanceFor(30.069, scale)
+  return <>
+    <ambientLight intensity={.08}/>
+    <pointLight position={[0,0,0]} intensity={900} distance={maxOrbit*2.3} decay={1.25} color="#fff2cf" castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.0002}/>
+    <mesh castShadow={false} onClick={() => select('Słońce')}>
+      <sphereGeometry args={[1.15,64,64]}/><meshBasicMaterial color="#ffb52d"/>
+    </mesh>
+    <pointLight position={[0,0,0]} intensity={38} distance={8} color="#ff9e1c"/>
+    {PLANETS.map(body => {
+      const distance = distanceFor(body.au, scale)
+      return <React.Fragment key={body.name}>
+        <Orbit radius={distance}/>
+        <Planet body={body} distance={distance} running={running} speed={speed} selected={selected} select={select} earthCamera={body.name === 'Ziemia' ? earthCamera : undefined}/>
+      </React.Fragment>
+    })}
+    <CameraSwitch mode={cameraMode} earthCamera={earthCamera}/>
+    {cameraMode === 'global' && <OrbitControls makeDefault enableDamping minDistance={3} maxDistance={maxOrbit*2.2}/>}
+  </>
+}
+
+function ShadowVolume({ start, end, r0, r1, color, opacity }) {
+  const length = end - start
+  const geometry = useMemo(() => {
+    const g = new THREE.CylinderGeometry(r0, r1, length, 64, 1, true)
+    g.rotateZ(Math.PI/2)
+    return g
+  }, [length,r0,r1])
+  return <mesh geometry={geometry} position={[(start+end)/2,0,0]}>
+    <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false}/>
+  </mesh>
+}
+
+function EclipseScene({ type, phase, cameraMode }) {
+  const earthGroup = useRef()
+  const attachedCamera = useRef()
+  const solar = type === 'solar'
+  const sunX = -42
+  const earthX = solar ? 8 : 0
+  const moonX = solar ? THREE.MathUtils.lerp(1.9, 6.75, phase) : THREE.MathUtils.lerp(4.5, 8, phase)
+  const moonY = Math.sin((phase-.5)*Math.PI) * 1.25
+  const sunR = 4.25, earthR = 1, moonR = .2724
+  const occX = solar ? moonX : earthX
+  const occR = solar ? moonR : earthR
+  const targetX = solar ? earthX : moonX
+  const d = occX - sunX
+  const umbraLength = d * occR / (sunR - occR)
+  const behind = Math.max(.01, targetX-occX)
+  const umbraAtTarget = Math.max(.01, occR - behind * (sunR-occR)/d)
+  const penumbraAtTarget = occR + behind * (sunR+occR)/d
+  useFrame((_,dt) => { if (earthGroup.current) earthGroup.current.rotation.x += dt*.045 })
+  return <>
+    <ambientLight intensity={.035}/>
+    <pointLight position={[sunX,0,0]} intensity={4200} distance={100} decay={1.15} color="#fff2d2" castShadow shadow-mapSize={[2048,2048]} shadow-camera-near={.1} shadow-camera-far={80} shadow-bias={-.00012}/>
+    <mesh position={[sunX,0,0]}><sphereGeometry args={[sunR,64,64]}/><meshBasicMaterial color="#ffb32c"/></mesh>
+    <group ref={earthGroup} position={[earthX,0,0]} rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+      <mesh castShadow receiveShadow>
+        <sphereGeometry args={[earthR,64,64]}/>
+        <meshStandardMaterial color="#2867bb" roughness={.86}/>
       </mesh>
+      <PerspectiveCamera ref={attachedCamera} position={[2.8,1.45,4.5]} fov={44}/>
     </group>
-  </group>
-}
-
-function SolarSystem({running,timeScale,selected,setSelected}){
-  const earthRef = useRef()
-  return <>
-    <ambientLight intensity={0.28}/>
-    <pointLight position={[0,0,0]} intensity={110} distance={80} decay={1.7} color="#fff4d6"/>
-    <mesh onClick={()=>setSelected('Słońce')}>
-      <sphereGeometry args={[1.35,48,48]}/>
-      <meshBasicMaterial color="#ffb21f"/>
+    <mesh position={[moonX,moonY,0]} castShadow receiveShadow>
+      <sphereGeometry args={[moonR,40,40]}/><meshStandardMaterial color="#aeb4bd" roughness={1}/>
     </mesh>
-    {planets.map(p=><React.Fragment key={p.name}><OrbitRing radius={p.orbit}/><Planet p={p} running={running} timeScale={timeScale} selected={selected} onSelect={setSelected} earthRef={p.name==='Ziemia'?earthRef:undefined}/></React.Fragment>)}
+    {Math.abs(moonY) < .72 && <>
+      <ShadowVolume start={occX} end={occX+umbraLength} r0={occR} r1={.001} color="#080b12" opacity={.46}/>
+      <ShadowVolume start={occX} end={targetX+.4} r0={occR} r1={penumbraAtTarget} color="#536078" opacity={.105}/>
+      <mesh position={[targetX-.002,0,0]} rotation={[0,Math.PI/2,0]}>
+        <circleGeometry args={[umbraAtTarget,64]}/><meshBasicMaterial color="#020307" transparent opacity={.82} depthWrite={false}/>
+      </mesh>
+      <mesh position={[targetX-.004,0,0]} rotation={[0,Math.PI/2,0]}>
+        <ringGeometry args={[umbraAtTarget,penumbraAtTarget,64]}/><meshBasicMaterial color="#172033" transparent opacity={.46} depthWrite={false}/>
+      </mesh>
+    </>}
+    <Line points={[[sunX,0,0],[targetX,0,0]]} color="#ffcb66" transparent opacity={.2}/>
+    <CameraSwitch mode={cameraMode} earthCamera={attachedCamera}/>
+    {cameraMode === 'global' && <OrbitControls makeDefault target={[solar?2:0,0,0]} enableDamping minDistance={4} maxDistance={70}/>}
   </>
 }
 
-function EclipseScene({progress}){
-  const moonX = -1 + progress*2
-  const sun = [-6,0,0], earth=[6,0,0], moon=[moonX*1.9,0,0]
-  const cone = useMemo(()=>{
-    const geo=new THREE.ConeGeometry(1.45,8,48,1,true)
-    geo.translate(0,-4,0); geo.rotateZ(Math.PI/2)
-    return geo
-  },[])
-  return <>
-    <ambientLight intensity={0.2}/><pointLight position={sun} intensity={80} distance={50}/>
-    <mesh position={sun}><sphereGeometry args={[1.35,48,48]}/><meshBasicMaterial color="#ffb21f"/></mesh>
-    <mesh position={earth}><sphereGeometry args={[1,48,48]}/><meshStandardMaterial color="#3274d9" roughness={0.9}/></mesh>
-    <mesh position={moon}><sphereGeometry args={[0.3,32,32]}/><meshStandardMaterial color="#c9c9c9"/></mesh>
-    <mesh geometry={cone} position={[2.3,0,0]} rotation={[0,0,0]}>
-      <meshBasicMaterial color="#151b28" transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false}/>
-    </mesh>
-    <Line points={[sun,moon,earth]} color="#ffcb62" transparent opacity={0.5}/>
-    <Html position={[0,-2.3,0]} center><div className="eclipse-note">Księżyc przechodzi między Słońcem a Ziemią. Cień pada na niewielki obszar powierzchni Ziemi.</div></Html>
-  </>
+function ScaleLegend({ scale }) {
+  return <div className="scale-note">
+    <span>SKALA WIDOKU</span>
+    <strong>{scale === 'astronomical' ? 'Względna / astronomiczna' : 'Czytelna / skompresowana'}</strong>
+    <p>Promienie i okresy zachowują relacje danych NASA. Odległości są {scale === 'astronomical' ? 'mapowane logarytmicznie względem AU' : 'skompresowane funkcją potęgową'}, aby 30,07 AU mieściło się na ekranie.</p>
+  </div>
 }
 
-function App(){
-  const [mode,setMode]=useState('system')
-  const [running,setRunning]=useState(true)
-  const [timeScale,setTimeScale]=useState(1)
-  const [selected,setSelected]=useState('Ziemia')
-  const [progress,setProgress]=useState(0.5)
+function App() {
+  const [view,setView] = useState('system')
+  const [scale,setScale] = useState('compressed')
+  const [running,setRunning] = useState(true)
+  const [speed,setSpeed] = useState(1)
+  const [selected,setSelected] = useState('Ziemia')
+  const [eclipse,setEclipse] = useState('solar')
+  const [phase,setPhase] = useState(.5)
+  const [cameraMode,setCameraMode] = useState('global')
+  const chosen = PLANETS.find(p=>p.name===selected)
   return <main>
     <header>
-      <div><span className="eyebrow">INTERAKTYWNE LABORATORIUM 3D</span><h1>Układ Słoneczny <em>i zaćmienie Słońca</em></h1></div>
-      <div className="tabs"><button className={mode==='system'?'active':''} onClick={()=>setMode('system')}>Układ Słoneczny</button><button className={mode==='eclipse'?'active':''} onClick={()=>setMode('eclipse')}>Zaćmienie</button></div>
+      <div><span className="eyebrow">ORBITAL MECHANICS · INTERACTIVE 3D</span><h1>Solar <em>Eclipse Lab</em></h1></div>
+      <nav className="tabs" aria-label="Widok">
+        <button className={view==='system'?'active':''} onClick={()=>{setView('system');setCameraMode('global')}}>Układ Słoneczny</button>
+        <button className={view==='eclipse'?'active':''} onClick={()=>{setView('eclipse');setCameraMode('global')}}>Laboratorium zaćmień</button>
+      </nav>
     </header>
     <section className="stage">
-      <Canvas camera={{position:mode==='system'?[18,13,20]:[0,8,18],fov:46}} dpr={[1,1.6]}>
-        <color attach="background" args={['#02040a']}/><Stars radius={80} depth={50} count={2200} factor={3} saturation={0}/>
-        <Suspense fallback={null}>{mode==='system'?<SolarSystem running={running} timeScale={timeScale} selected={selected} setSelected={setSelected}/>:<EclipseScene progress={progress}/>}</Suspense>
-        <OrbitControls enableDamping minDistance={4} maxDistance={50}/>
+      <Canvas shadows dpr={[1,1.75]} camera={{position:view==='system'?[18,14,22]:[17,9,18],fov:46}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
+        <color attach="background" args={['#03060c']}/><fog attach="fog" args={['#03060c',42,105]}/>
+        <Stars radius={95} depth={45} count={2600} factor={3} saturation={0}/>
+        <Suspense fallback={null}>{view==='system'
+          ? <SolarSystem running={running} speed={speed} scale={scale} selected={selected} select={setSelected} cameraMode={cameraMode}/>
+          : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode}/>}
+        </Suspense>
       </Canvas>
+      <div className="status"><i className={running?'live':''}/>{view==='system'?(running?'SYMULACJA AKTYWNA':'PAUZA'):(eclipse==='solar'?'ZAĆMIENIE SŁOŃCA':'ZAĆMIENIE KSIĘŻYCA')}</div>
       <aside className="panel">
-        {mode==='system'?<>
-          <span className="section-kicker">STEROWANIE</span><h2>Model poglądowy</h2>
-          <p>Rozmiary i odległości są celowo skompresowane, aby cały układ był czytelny. Proporcje prędkości orbitalnych zachowują zależności między planetami.</p>
-          <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj ruch':'Uruchom ruch'}</button>
-          <label>Tempo <b>{timeScale.toFixed(1)}×</b><input type="range" min="0.2" max="5" step="0.1" value={timeScale} onChange={e=>setTimeScale(+e.target.value)}/></label>
-          <div className="selected"><small>WYBRANY OBIEKT</small><strong>{selected}</strong></div>
-          <p className="hint">Przeciągnij, aby obrócić widok. Kółko myszy przybliża. Kliknij planetę, aby ją wskazać.</p>
-        </>:<>
-          <span className="section-kicker">MECHANIZM</span><h2>Dlaczego powstaje zaćmienie?</h2>
-          <div className="steps"><div><b>1</b><span>Księżyc ustawia się pomiędzy Słońcem i Ziemią.</span></div><div><b>2</b><span>Blokuje część promieni słonecznych.</span></div><div><b>3</b><span>Stożek cienia trafia w powierzchnię Ziemi.</span></div></div>
-          <label>Pozycja Księżyca<input type="range" min="0" max="1" step="0.01" value={progress} onChange={e=>setProgress(+e.target.value)}/></label>
-          <div className="fact"><strong>Nie przy każdym nowiu.</strong><span>Orbita Księżyca jest nachylona względem płaszczyzny orbity Ziemi, więc idealne ustawienie występuje tylko wtedy, gdy Księżyc znajduje się blisko węzła swojej orbity.</span></div>
+        {view==='system' ? <>
+          <span className="section-kicker">MODEL DANYCH</span><h2>Proporcje, które można odczytać</h2>
+          <div className="segmented"><button className={scale==='compressed'?'on':''} onClick={()=>setScale('compressed')}>Czytelna</button><button className={scale==='astronomical'?'on':''} onClick={()=>setScale('astronomical')}>Astronomiczna</button></div>
+          <ScaleLegend scale={scale}/>
+          <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
+          <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
+          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}</div>
+        </> : <>
+          <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
+          <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
+          <p>{eclipse==='solar'?'Księżyc blokuje tarczę Słońca. Umbra tworzy małą, ciemną plamę na Ziemi; penumbra wyznacza obszar zaćmienia częściowego.':'Ziemia przechodzi między Słońcem a Księżycem. Księżyc zanurza się kolejno w półcieniu i cieniu Ziemi.'}</p>
+          <label>Przejście przez węzeł <b>{Math.round(phase*100)}%</b><input type="range" min="0" max="1" step=".005" value={phase} onChange={e=>setPhase(+e.target.value)}/></label>
+          <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
+          <div className="callout">W scenie lokalnej relacje promieni są rzeczywiste. Odległość do Słońca jest jawnie skompresowana; stożki cienia są liczone z geometrii skończonej tarczy Słońca.</div>
         </>}
+        <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>
       </aside>
+      <div className="legend"><span><i className="umbra"/>Umbra</span><span><i className="penumbra"/>Penumbra</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></div>
     </section>
-    <footer><span>Prototype: WebGL / Three.js</span><span>Przygotowane jako baza pod import GLB i dane z IFC</span></footer>
+    <footer><span>THREE.JS / R3F · PHYSICALLY BASED SHADOWS</span><span>Dane: średnie promienie i okresy orbitalne · epoka poglądowa</span></footer>
   </main>
 }
-
 createRoot(document.getElementById('root')).render(<App/>)
