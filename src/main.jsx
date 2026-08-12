@@ -33,7 +33,7 @@ function Orbit({ radius }) {
   return <Line points={points} color="#26334b" transparent opacity={.62} lineWidth={1}/>
 }
 
-function Planet({ body, distance, running, speed, selected, select, earthCamera }) {
+function Planet({ body, distance, running, speed, selected, select, earthAnchor }) {
   const orbit = useRef()
   const spin = useRef()
   const radius = radiusFor(body.radius)
@@ -42,7 +42,7 @@ function Planet({ body, distance, running, speed, selected, select, earthCamera 
     spin.current.rotation.y += dt * .28
   })
   return <group ref={orbit}>
-    <group position={[distance, 0, 0]}>
+    <group ref={body.name==='Ziemia'?earthAnchor:undefined} position={[distance, 0, 0]}>
       <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
         <sphereGeometry args={[radius, 40, 40]}/>
         <meshStandardMaterial color={body.color} roughness={.78}/>
@@ -52,7 +52,6 @@ function Planet({ body, distance, running, speed, selected, select, earthCamera 
         <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
       {body.name === 'Ziemia' && <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-        <PerspectiveCamera ref={earthCamera} position={[1.25,.75,1.9]} fov={48}/>
         <mesh position={[radius + .16,0,0]} castShadow receiveShadow>
           <sphereGeometry args={[Math.max(.055,radius*.2724),24,24]}/>
           <meshStandardMaterial color="#b8bdc5" roughness={1}/>
@@ -73,8 +72,40 @@ function CameraSwitch({ mode, earthCamera }) {
   return null
 }
 
+function SystemEarthRig({ active, anchor }) {
+  const camera = useRef()
+  const controls = useRef()
+  const previousTarget = useRef(new THREE.Vector3())
+  const initialized = useRef(false)
+  useFrame(({ set }) => {
+    if (!active || !camera.current || !anchor.current || !controls.current) {
+      initialized.current = false
+      return
+    }
+    const target = new THREE.Vector3()
+    anchor.current.getWorldPosition(target)
+    if (!initialized.current) {
+      camera.current.position.copy(target).add(new THREE.Vector3(1.35,.72,1.75))
+      controls.current.target.copy(target)
+      previousTarget.current.copy(target)
+      initialized.current = true
+      set({camera:camera.current})
+    } else {
+      const delta = target.clone().sub(previousTarget.current)
+      camera.current.position.add(delta)
+      controls.current.target.copy(target)
+      previousTarget.current.copy(target)
+    }
+    controls.current.update()
+  })
+  return <>
+    <PerspectiveCamera ref={camera} near={.015} far={160} fov={44}/>
+    {active && <OrbitControls ref={controls} makeDefault camera={camera.current} enableDamping dampingFactor={.08} enableRotate enableZoom zoomToCursor enablePan={false} minDistance={.48} maxDistance={7} minPolarAngle={.22} maxPolarAngle={2.92} rotateSpeed={.55} zoomSpeed={.8}/>}
+  </>
+}
+
 function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
-  const earthCamera = useRef()
+  const earthAnchor = useRef()
   const maxOrbit = distanceFor(30.069, scale)
   return <>
     <ambientLight intensity={.08}/>
@@ -87,10 +118,10 @@ function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
       const distance = distanceFor(body.au, scale)
       return <React.Fragment key={body.name}>
         <Orbit radius={distance}/>
-        <Planet body={body} distance={distance} running={running} speed={speed} selected={selected} select={select} earthCamera={body.name === 'Ziemia' ? earthCamera : undefined}/>
+        <Planet body={body} distance={distance} running={running} speed={speed} selected={selected} select={select} earthAnchor={body.name === 'Ziemia' ? earthAnchor : undefined}/>
       </React.Fragment>
     })}
-    <CameraSwitch mode={cameraMode} earthCamera={earthCamera}/>
+    <SystemEarthRig active={cameraMode==='earth'} anchor={earthAnchor}/>
     {cameraMode === 'global' && <OrbitControls makeDefault enableDamping minDistance={3} maxDistance={maxOrbit*2.2}/>}
   </>
 }
