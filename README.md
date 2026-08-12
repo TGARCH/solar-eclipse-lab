@@ -20,3 +20,6 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Deployment
+Źródłem aplikacji jest gałąź `main` repozytorium GitHub. Każdy push do `main` uruchamia automatyczny deployment na Vercelu.
