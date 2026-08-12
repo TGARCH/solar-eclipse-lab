@@ -77,7 +77,7 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
         const box = new THREE.Box3().setFromObject(root)
         const center = box.getCenter(new THREE.Vector3())
         const sourceSize = box.getSize(new THREE.Vector3())
-        const normalization = 12 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z)
+        const normalization = 7.2 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z)
         root.scale.setScalar(normalization)
         root.position.set(-center.x * normalization, -box.min.y * normalization, -center.z * normalization)
         const size = sourceSize.multiplyScalar(normalization)
