@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Grid, OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { IfcAPI } from 'web-ifc'
@@ -20,7 +20,7 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
         api = new IfcAPI()
         api.SetWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/', true)
         await api.Init()
-        const response = await fetch('/models/test.ifc')
+        const response = await fetch('/models/test3.ifc')
         if (!response.ok) throw new Error('Nie udało się pobrać pliku IFC')
         const data = new Uint8Array(await response.arrayBuffer())
         onState({ status: 'Generowanie geometrii', error: null })
@@ -54,7 +54,6 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
             geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
             geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1))
             geometry.applyMatrix4(new THREE.Matrix4().fromArray(placed.flatTransformation))
-            geometry.rotateX(-Math.PI / 2)
             geometry.computeBoundingSphere()
             const c = placed.color
             const material = new THREE.MeshStandardMaterial({
@@ -79,14 +78,14 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
         const sourceSize = box.getSize(new THREE.Vector3())
         const normalization = 7.2 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z)
         root.scale.setScalar(normalization)
-        root.position.set(-center.x * normalization, -box.min.y * normalization, -center.z * normalization)
+        root.position.set(-center.x * normalization, -center.y * normalization, -box.min.z * normalization)
         const size = sourceSize.multiplyScalar(normalization)
-        const distance = 17
-        const targetY = Math.max(1.2, size.y * .38)
-        camera.position.set(11.5, 8.5, 14.5)
+        const targetZ = Math.max(1.2, size.z * .38)
+        camera.up.set(0, 0, 1)
+        camera.position.set(11.5, -14.5, 8.5)
         camera.near = .02
         camera.far = 250
-        camera.lookAt(0, targetY, 0)
+        camera.lookAt(0, 0, targetZ)
         camera.updateProjectionMatrix()
         if (!disposed) {
           setModel(root)
@@ -117,11 +116,11 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
     })
   }, [model, selectedId])
 
-  const target = useMemo(() => new THREE.Vector3(0, 1.6, 0), [])
+  const target = useMemo(() => new THREE.Vector3(0, 0, 1.6), [])
   return <>
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
     <directionalLight position={[12, 18, 10]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-.00015}/>
-    <Grid position={[0,-.012,0]} args={[80,80]} cellSize={.5} sectionSize={5} cellColor="#273746" sectionColor="#5c7687" fadeDistance={55} fadeStrength={1.5} infiniteGrid/>
+    <gridHelper args={[80,80,'#5c7687','#273746']} rotation={[Math.PI/2,0,0]} position={[0,0,-.012]}/>
     {model && <primitive object={model} onPointerDown={event => {
       event.stopPropagation()
       const info = event.object.userData.info
