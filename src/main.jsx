@@ -285,7 +285,7 @@ function App() {
           <p>{eclipse==='solar'?'Księżyc blokuje tarczę Słońca. Umbra tworzy małą, ciemną plamę na Ziemi; penumbra wyznacza obszar zaćmienia częściowego.':'Ziemia przechodzi między Słońcem a Księżycem. Księżyc zanurza się kolejno w półcieniu i cieniu Ziemi.'}</p>
           <label>Faza orbity Księżyca <b>{Math.round(phase*100)}%</b><input type="range" min="0" max="1" step=".005" value={phase} onChange={e=>setPhase(+e.target.value)}/></label>
           <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
-          <div className="callout">Promień Księżyca wynosi dokładnie 0,2724 promienia Ziemi. Orbita ma nachylenie 5,145°. Wolumetria jest edukacyjną symulacją pyłu; w próżni efekt Tyndalla nie występuje.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
+          <div className="callout">Skala widoku jest skompresowana, lecz cień korzysta z osobnej skali optycznej: 60,3 promienia Ziemi do Księżyca i 23 455 do Słońca. Plama oraz stożki wynikają z tego samego obliczenia.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
         </>}
         <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>
       </aside>
