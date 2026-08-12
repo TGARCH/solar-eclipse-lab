@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Html, Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei'
@@ -64,8 +64,10 @@ function Planet({ body, distance, running, speed, selected, select, earthCamera 
 }
 
 function CameraSwitch({ mode, earthCamera }) {
+  const globalCamera = useRef()
   useFrame(({ set, camera }) => {
-    const target = mode === 'earth' ? earthCamera.current : null
+    if (!globalCamera.current && camera !== earthCamera.current) globalCamera.current = camera
+    const target = mode === 'earth' ? earthCamera.current : globalCamera.current
     if (target && camera !== target) set({ camera: target })
   })
   return null
@@ -102,14 +104,71 @@ function ShadowVolume({ origin, direction, length, r0, r1, color, opacity }) {
   </mesh>
 }
 
+const eclipseVertex = `
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldNormal;
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = world.xyz;
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }
+`
+
+const eclipseFragment = `
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldNormal;
+  uniform vec3 uBaseColor;
+  uniform vec3 uSun;
+  uniform vec3 uOcculter;
+  uniform vec3 uShadowDirection;
+  uniform float uOcculterRadius;
+  uniform float uSunRadius;
+  uniform float uOpticalScale;
+  uniform float uOpticalSourceDistance;
+
+  void main() {
+    vec3 toSun = normalize(uSun - vWorldPosition);
+    float diffuse = max(dot(normalize(vWorldNormal), toSun), 0.0);
+    vec3 rel = vWorldPosition - uOcculter;
+    float axial = dot(rel, uShadowDirection);
+    vec3 radialVector = rel - uShadowDirection * axial;
+    float radial = length(radialVector);
+    float opticalAxial = max(axial, 0.0) * uOpticalScale;
+    float umbra = max(0.0, uOcculterRadius - opticalAxial * (uSunRadius-uOcculterRadius) / uOpticalSourceDistance);
+    float penumbra = uOcculterRadius + opticalAxial * (uSunRadius+uOcculterRadius) / uOpticalSourceDistance;
+    float shadow = axial > 0.0 ? 1.0-smoothstep(umbra, max(umbra+.0005,penumbra), radial) : 0.0;
+    float light = (0.065 + diffuse * 0.935) * (1.0-shadow*.94);
+    gl_FragColor = vec4(uBaseColor * light, 1.0);
+  }
+`
+
+function EclipseSurface({ color, sun, occulter, direction, occulterRadius, opticalScale, opticalSourceDistance }) {
+  const uniforms = useMemo(() => ({
+    uBaseColor:{value:new THREE.Color(color)},
+    uSun:{value:sun.clone()},
+    uOcculter:{value:occulter.clone()},
+    uShadowDirection:{value:direction.clone()},
+    uOcculterRadius:{value:occulterRadius},
+    uSunRadius:{value:109.1},
+    uOpticalScale:{value:opticalScale},
+    uOpticalSourceDistance:{value:opticalSourceDistance}
+  }), [color,sun.x,sun.y,sun.z,occulter.x,occulter.y,occulter.z,direction.x,direction.y,direction.z,occulterRadius,opticalScale,opticalSourceDistance])
+  return <shaderMaterial uniforms={uniforms} vertexShader={eclipseVertex} fragmentShader={eclipseFragment}/>
+}
+
 function EclipseScene({ type, phase, cameraMode, showVolume }) {
   const earthSpin = useRef()
   const attachedCamera = useRef()
-  const moonRef = useRef()
+  const [rigCamera,setRigCamera] = useState(null)
+  const captureCamera = useCallback(camera => {
+    attachedCamera.current = camera
+    setRigCamera(camera)
+  }, [])
   const solar = type === 'solar'
   const sun = useMemo(() => new THREE.Vector3(-44,0,0), [])
   const earth = useMemo(() => new THREE.Vector3(5,0,0), [])
-  const sunR = 4.25, earthR = 1, moonR = .2724
+  const visualSunR = 4.25, earthR = 1, moonR = .2724
   const orbitRadius = 4.15
   const inclination = THREE.MathUtils.degToRad(5.145)
   const angle = (solar ? Math.PI : 0) + (phase-.5) * Math.PI * 2
@@ -127,48 +186,51 @@ function EclipseScene({ type, phase, cameraMode, showVolume }) {
   const target = solar ? earth : moon
   const occR = solar ? moonR : earthR
   const targetR = solar ? earthR : moonR
+  const opticalTargetDistance = solar ? 56.0 : 60.3
+  const opticalSourceDistance = solar ? 23455-56.0 : 23455
   const ray = occulter.clone().sub(sun)
-  const sourceDistance = ray.length()
   const direction = ray.normalize()
   const toTarget = target.clone().sub(occulter)
   const targetDistance = toTarget.dot(direction)
   const missDistance = toTarget.clone().sub(direction.clone().multiplyScalar(targetDistance)).length()
-  const umbraLength = sourceDistance * occR / (sunR-occR)
-  const umbraAtTarget = Math.max(0,occR-targetDistance*(sunR-occR)/sourceDistance)
-  const penumbraAtTarget = occR+targetDistance*(sunR+occR)/sourceDistance
+  const opticalScale = opticalTargetDistance / Math.max(.001,targetDistance)
+  const umbraAtTarget = Math.max(0,occR-opticalTargetDistance*(109.1-occR)/opticalSourceDistance)
+  const penumbraAtTarget = occR+opticalTargetDistance*(109.1+occR)/opticalSourceDistance
+  const umbraVisualLength = targetDistance * Math.min(1, occR / Math.max(.0001,occR-umbraAtTarget))
   const aligned = targetDistance>0 && missDistance < penumbraAtTarget+targetR
   useFrame((_,dt) => {
     if (earthSpin.current) earthSpin.current.rotation.y += dt*.075
-    if (attachedCamera.current && moonRef.current) {
-      const p = new THREE.Vector3()
-      moonRef.current.getWorldPosition(p)
-      attachedCamera.current.lookAt(p)
-    }
   })
   return <>
     <ambientLight intensity={.025}/>
-    <pointLight position={sun} intensity={4600} distance={110} decay={1.15} color="#fff2d2" castShadow shadow-mapSize={[2048,2048]} shadow-camera-near={.1} shadow-camera-far={90} shadow-bias={-.00008}/>
-    <mesh position={sun}><sphereGeometry args={[sunR,64,64]}/><meshBasicMaterial color="#ffb32c"/></mesh>
+    <pointLight position={sun} intensity={4600} distance={110} decay={1.15} color="#fff2d2"/>
+    <mesh position={sun}><sphereGeometry args={[visualSunR,64,64]}/><meshBasicMaterial color="#ffb32c"/></mesh>
     <group position={earth}>
       <Line points={orbitPoints} color="#5c718f" transparent opacity={.45}/>
       <group ref={earthSpin} rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-        <mesh castShadow receiveShadow>
-          <sphereGeometry args={[earthR,64,64]}/>
-          <meshStandardMaterial color="#2867bb" roughness={.86}/>
+        <mesh>
+          <sphereGeometry args={[earthR,96,96]}/>
+          {solar
+            ? <EclipseSurface color="#73aee8" sun={sun} occulter={moon} direction={direction} occulterRadius={moonR} opticalScale={opticalScale} opticalSourceDistance={opticalSourceDistance}/>
+            : <meshStandardMaterial color="#2867bb" roughness={.86}/>}
         </mesh>
-        <PerspectiveCamera ref={attachedCamera} position={[0,2.7,8.5]} near={.08} far={120} fov={42}/>
+        <PerspectiveCamera ref={captureCamera} position={[0,2.7,8.5]} near={.08} far={120} fov={42} onUpdate={camera=>camera.lookAt(0,0,0)}/>
       </group>
-      <mesh ref={moonRef} position={moonLocal} castShadow receiveShadow>
-        <sphereGeometry args={[moonR,40,40]}/><meshStandardMaterial color="#aeb4bd" roughness={1}/>
+      <mesh position={moonLocal}>
+        <sphereGeometry args={[moonR,64,64]}/>
+        {!solar
+          ? <EclipseSurface color="#b8bdc5" sun={sun} occulter={earth} direction={direction} occulterRadius={earthR} opticalScale={opticalScale} opticalSourceDistance={opticalSourceDistance}/>
+          : <meshStandardMaterial color="#aeb4bd" roughness={1}/>}
       </mesh>
     </group>
     {showVolume && aligned && <>
-      <ShadowVolume origin={occulter} direction={direction} length={Math.min(umbraLength,targetDistance+targetR*2)} r0={occR} r1={Math.max(.002,umbraAtTarget)} color="#02040a" opacity={.34}/>
-      <ShadowVolume origin={occulter} direction={direction} length={targetDistance+targetR*2} r0={occR} r1={penumbraAtTarget} color="#71839d" opacity={.075}/>
+      <ShadowVolume origin={occulter} direction={direction} length={Math.max(targetDistance+targetR,umbraVisualLength)} r0={occR} r1={Math.max(.001,umbraAtTarget)} color="#02040a" opacity={.30}/>
+      <ShadowVolume origin={occulter} direction={direction} length={targetDistance+targetR} r0={occR} r1={penumbraAtTarget} color="#71839d" opacity={.07}/>
     </>}
     <Line points={[sun.toArray(),earth.toArray()]} color="#ffcb66" transparent opacity={.17}/>
     <CameraSwitch mode={cameraMode} earthCamera={attachedCamera}/>
     {cameraMode === 'global' && <OrbitControls makeDefault target={[2,0,0]} enableDamping minDistance={5} maxDistance={75}/>}
+    {cameraMode === 'earth' && rigCamera && <OrbitControls makeDefault camera={rigCamera} target={[0,0,0]} enableDamping enablePan={false} minDistance={5.8} maxDistance={13} minPolarAngle={.55} maxPolarAngle={2.35} rotateSpeed={.35}/>}
   </>
 }
 
