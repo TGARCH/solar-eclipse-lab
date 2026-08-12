@@ -38,6 +38,8 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
             name: valueOf(line?.Name) || valueOf(line?.ObjectType) || 'Element bez nazwy',
             globalId: valueOf(line?.GlobalId) || '—'
           })
+          const hiddenHelperTypes = new Set(['IFCSPACE', 'IFCOPENINGELEMENT'])
+          if (hiddenHelperTypes.has(ifcType.toUpperCase())) return
           for (let i = 0; i < flatMesh.geometries.size(); i++) {
             const placed = flatMesh.geometries.get(i)
             const source = api.GetGeometry(modelID, placed.geometryExpressID)
