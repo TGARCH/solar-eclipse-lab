@@ -73,34 +73,43 @@ function CameraSwitch({ mode, earthCamera }) {
 }
 
 function SystemEarthRig({ active, anchor }) {
-  const camera = useRef()
+  const cameraRef = useRef()
+  const [rigCamera,setRigCamera] = useState(null)
   const controls = useRef()
+  const globalCamera = useRef()
   const previousTarget = useRef(new THREE.Vector3())
   const initialized = useRef(false)
-  useFrame(({ set }) => {
-    if (!active || !camera.current || !anchor.current || !controls.current) {
+  const captureCamera = useCallback(camera => {
+    cameraRef.current = camera
+    setRigCamera(camera)
+  }, [])
+  useFrame(({ set, camera }) => {
+    if (!globalCamera.current && camera !== cameraRef.current) globalCamera.current = camera
+    if (!active) {
+      if (initialized.current && globalCamera.current) set({camera:globalCamera.current})
       initialized.current = false
       return
     }
+    if (!cameraRef.current || !anchor.current || !controls.current) return
     const target = new THREE.Vector3()
     anchor.current.getWorldPosition(target)
     if (!initialized.current) {
-      camera.current.position.copy(target).add(new THREE.Vector3(1.35,.72,1.75))
+      cameraRef.current.position.copy(target).add(new THREE.Vector3(1.35,.72,1.75))
       controls.current.target.copy(target)
       previousTarget.current.copy(target)
       initialized.current = true
-      set({camera:camera.current})
+      set({camera:cameraRef.current})
     } else {
       const delta = target.clone().sub(previousTarget.current)
-      camera.current.position.add(delta)
+      cameraRef.current.position.add(delta)
       controls.current.target.copy(target)
       previousTarget.current.copy(target)
     }
     controls.current.update()
   })
   return <>
-    <PerspectiveCamera ref={camera} near={.015} far={160} fov={44}/>
-    {active && <OrbitControls ref={controls} makeDefault camera={camera.current} enableDamping dampingFactor={.08} enableRotate enableZoom zoomToCursor enablePan={false} minDistance={.48} maxDistance={7} minPolarAngle={.22} maxPolarAngle={2.92} rotateSpeed={.55} zoomSpeed={.8}/>}
+    <PerspectiveCamera ref={captureCamera} near={.015} far={160} fov={44}/>
+    {active && rigCamera && <OrbitControls ref={controls} makeDefault camera={rigCamera} enableDamping dampingFactor={.08} enableRotate enableZoom zoomToCursor enablePan={false} minDistance={.48} maxDistance={7} minPolarAngle={.22} maxPolarAngle={2.92} rotateSpeed={.55} zoomSpeed={.8}/>}
   </>
 }
 
