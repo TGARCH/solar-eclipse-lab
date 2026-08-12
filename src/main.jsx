@@ -372,7 +372,7 @@ function App() {
           <ScaleLegend scale={scale}/>
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
-          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Oś Ziemi: 23,44° · Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>Odległość orbity jest skompresowana wyłącznie dla czytelności.</span>}</div>
+          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Oś Ziemi: 23,44° · Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>{scale==='true'?'Odległość środka Księżyca: 60,3 R⊕ — skala liniowa 1:1.':'Odległość orbity jest skompresowana wyłącznie dla czytelności.'}</span>}</div>
         </> : <>
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
