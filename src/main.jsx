@@ -166,25 +166,103 @@ function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
   </>
 }
 
-function TrueScaleEarthMoon({ running, speed, cameraMode }) {
-  const earthAnchor = useRef()
-  const earthSpin = useRef()
-  const earthRadius = 1
-  useFrame((_,dt)=>{ if (running && earthSpin.current) earthSpin.current.rotation.y += dt*speed*.28 })
-  return <>
-    <ambientLight intensity={.06}/>
-    <directionalLight position={[-12,1,0]} intensity={3.2} color="#fff1cf"/>
-    <group ref={earthAnchor}>
-      <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-        <mesh ref={earthSpin} castShadow receiveShadow>
-          <sphereGeometry args={[earthRadius,64,64]}/><EarthMaterial/>
-        </mesh>
-        <Line points={[[0,-1.55,0],[0,1.55,0]]} color="#9bc6ef" transparent opacity={.8}/>
-      </group>
-      <EarthMoonSystem earthRadius={earthRadius} running={running} speed={speed} trueScale/>
+function TrueMoon({ running, speed, register, select }) {
+  const orbit = useRef()
+  const moonRadius = MOON_RADIUS / AU_KM * 10
+  const moonDistance = MOON_DISTANCE / AU_KM * 10
+  useFrame((_,dt)=>{ if(running && orbit.current) orbit.current.rotation.y += dt*speed*(365.256/27.3217)*.13 })
+  return <group rotation={[THREE.MathUtils.degToRad(5.145),0,0]}>
+    <Orbit radius={moonDistance}/>
+    <group ref={orbit}>
+      <mesh ref={node=>{if(node)register('Księżyc',node,moonRadius)}} position={[moonDistance,0,0]} onClick={e=>{e.stopPropagation();select('Księżyc')}}>
+        <sphereGeometry args={[moonRadius,32,32]}/><meshStandardMaterial color="#aeb3ba" roughness={1}/>
+      </mesh>
     </group>
-    <SystemEarthRig active={cameraMode==='earth'} anchor={earthAnchor}/>
-    {cameraMode==='global' && <OrbitControls makeDefault target={[0,0,0]} enableDamping minDistance={2.2} maxDistance={110}/>}
+  </group>
+}
+
+function TruePlanet({ body, running, speed, register, select }) {
+  const orbit = useRef()
+  const spin = useRef()
+  const radius = body.radius / AU_KM * 10
+  const distance = body.au * 10
+  useFrame((_,dt)=>{
+    if(running && orbit.current) orbit.current.rotation.y += dt*speed*(365.256/body.period)*.13
+    if(spin.current) spin.current.rotation.y += dt*.28
+  })
+  return <>
+    <Orbit radius={distance}/>
+    <group ref={orbit}>
+      <group ref={node=>{if(node)register(body.name,node,radius)}} position={[distance,0,0]}>
+        {body.name==='Ziemia' ? <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+          <mesh ref={spin} onClick={e=>{e.stopPropagation();select(body.name)}}>
+            <sphereGeometry args={[radius,48,48]}/><EarthMaterial/>
+          </mesh>
+          <Line points={[[0,-radius*1.55,0],[0,radius*1.55,0]]} color="#9bc6ef" transparent opacity={.8}/>
+        </group> : <mesh ref={spin} onClick={e=>{e.stopPropagation();select(body.name)}}>
+          <sphereGeometry args={[radius,40,40]}/><meshStandardMaterial color={body.color} roughness={.78}/>
+        </mesh>}
+        {body.name==='Ziemia' && <TrueMoon running={running} speed={speed} register={register} select={select}/>}
+        {body.name==='Saturn' && <mesh rotation={[Math.PI/2,0,0]}>
+          <ringGeometry args={[radius*1.25,radius*1.9,64]}/><meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide}/>
+        </mesh>}
+      </group>
+    </group>
+  </>
+}
+
+function TrueScaleCamera({ focus, targets }) {
+  const cameraRef = useRef()
+  const [camera,setCamera] = useState(null)
+  const controls = useRef()
+  const lastFocus = useRef('')
+  const previousTarget = useRef(new THREE.Vector3())
+  const capture = useCallback(node=>{cameraRef.current=node;setCamera(node)},[])
+  const radius = focus==='Przegląd' ? 30 : (targets.current[focus]?.radius || .001)
+  useFrame(({set})=>{
+    if(!cameraRef.current || !controls.current) return
+    const entry=targets.current[focus]
+    const target=new THREE.Vector3()
+    if(focus!=='Przegląd'){
+      if(!entry?.node) return
+      entry.node.getWorldPosition(target)
+    }
+    if(lastFocus.current!==focus){
+      const distance=focus==='Przegląd'?390:Math.max(radius*5,radius+.00035)
+      cameraRef.current.near=focus==='Przegląd'?.01:Math.max(radius/100,.0000001)
+      cameraRef.current.far=1000
+      cameraRef.current.updateProjectionMatrix()
+      cameraRef.current.position.copy(target).add(focus==='Przegląd'?new THREE.Vector3(0,225,320):new THREE.Vector3(distance*.55,distance*.35,distance))
+      controls.current.target.copy(target)
+      previousTarget.current.copy(target)
+      lastFocus.current=focus
+      set({camera:cameraRef.current})
+    }else if(focus!=='Przegląd'){
+      const delta=target.clone().sub(previousTarget.current)
+      cameraRef.current.position.add(delta)
+      controls.current.target.copy(target)
+      previousTarget.current.copy(target)
+    }
+    controls.current.update()
+  })
+  return <>
+    <PerspectiveCamera ref={capture} fov={42}/>
+    {camera&&<OrbitControls ref={controls} makeDefault camera={camera} enableDamping enablePan={false} minDistance={focus==='Przegląd'?3:Math.max(radius*1.2,.00015)} maxDistance={focus==='Przegląd'?700:Math.max(radius*40,.01)} zoomToCursor/>}
+  </>
+}
+
+function TrueScaleSolarSystem({ running, speed, focus, setFocus }) {
+  const targets=useRef({})
+  const register=useCallback((name,node,radius)=>{targets.current[name]={node,radius}},[])
+  const sunRadius=SUN_RADIUS/AU_KM*10
+  return <>
+    <ambientLight intensity={.045}/>
+    <pointLight position={[0,0,0]} intensity={2500} distance={650} decay={1.1} color="#fff1cf"/>
+    <mesh ref={node=>{if(node)register('Słońce',node,sunRadius)}} onClick={()=>setFocus('Słońce')}>
+      <sphereGeometry args={[sunRadius,64,64]}/><meshBasicMaterial color="#ffb52d"/>
+    </mesh>
+    {PLANETS.map(body=><TruePlanet key={body.name} body={body} running={running} speed={speed} register={register} select={setFocus}/>)}
+    <TrueScaleCamera focus={focus} targets={targets}/>
   </>
 }
 
@@ -332,7 +410,7 @@ function ScaleLegend({ scale }) {
   return <div className="scale-note">
     <span>SKALA WIDOKU</span>
     <strong>{real?'1:1 · Ziemia–Księżyc':'Schemat · cały układ'}</strong>
-    <p>{real?'Promienie i średnia odległość 60,3 R⊕ są liniowe. Pozostałe planety ukryto, ponieważ w tej samej skali nie zmieściłyby się w czytelnym kadrze.':'Rozmiary i odległości są jawnie skompresowane; okresy obiegu zachowują relacje astronomiczne.'}</p>
+    <p>{real?'Promienie i średnia odległość 60,3 R⊕ są liniowe. Cały układ zachowuje liniowe promienie i odległości; użyj nawigatora, aby przejść od przeglądu do skali konkretnego ciała.':'Rozmiary i odległości są jawnie skompresowane; okresy obiegu zachowują relacje astronomiczne.'}</p>
   </div>
 }
 
@@ -346,6 +424,7 @@ function App() {
   const [phase,setPhase] = useState(.5)
   const [cameraMode,setCameraMode] = useState('global')
   const [showVolume,setShowVolume] = useState(true)
+  const [trueFocus,setTrueFocus] = useState('Przegląd')
   const chosen = PLANETS.find(p=>p.name===selected)
   return <main>
     <header>
@@ -360,7 +439,7 @@ function App() {
         <color attach="background" args={['#03060c']}/><fog attach="fog" args={['#03060c',42,105]}/>
         <Stars radius={95} depth={45} count={2600} factor={3} saturation={0}/>
         <Suspense fallback={null}>{view==='system'
-          ? (scale==='true' ? <TrueScaleEarthMoon running={running} speed={speed} cameraMode={cameraMode}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
+          ? (scale==='true' ? <TrueScaleSolarSystem running={running} speed={speed} focus={trueFocus} setFocus={setTrueFocus}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
           : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
         </Suspense>
       </Canvas>
@@ -373,7 +452,7 @@ function App() {
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
           <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Oś Ziemi: 23,44° · Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>{scale==='true'?'Odległość środka Księżyca: 60,3 R⊕ — skala liniowa 1:1.':'Odległość orbity jest skompresowana wyłącznie dla czytelności.'}</span>}</div>
-        </> : <>
+        {scale==='true'&&<div className="object-nav"><span>NAWIGATOR 1:1</span><div><button className={trueFocus==='Przegląd'?'on':''} onClick={()=>setTrueFocus('Przegląd')}>Przegląd</button><button className={trueFocus==='Słońce'?'on':''} onClick={()=>setTrueFocus('Słońce')}>Słońce</button><button className={trueFocus==='Merkury'?'on':''} onClick={()=>setTrueFocus('Merkury')}>Merkury</button><button className={trueFocus==='Wenus'?'on':''} onClick={()=>setTrueFocus('Wenus')}>Wenus</button><button className={trueFocus==='Ziemia'?'on':''} onClick={()=>setTrueFocus('Ziemia')}>Ziemia</button><button className={trueFocus==='Księżyc'?'on':''} onClick={()=>setTrueFocus('Księżyc')}>Księżyc</button><button className={trueFocus==='Mars'?'on':''} onClick={()=>setTrueFocus('Mars')}>Mars</button><button className={trueFocus==='Jowisz'?'on':''} onClick={()=>setTrueFocus('Jowisz')}>Jowisz</button><button className={trueFocus==='Saturn'?'on':''} onClick={()=>setTrueFocus('Saturn')}>Saturn</button><button className={trueFocus==='Uran'?'on':''} onClick={()=>setTrueFocus('Uran')}>Uran</button><button className={trueFocus==='Neptun'?'on':''} onClick={()=>setTrueFocus('Neptun')}>Neptun</button></div></div>}</> : <>
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
           <p>{eclipse==='solar'?'Księżyc blokuje tarczę Słońca. Umbra tworzy małą, ciemną plamę na Ziemi; penumbra wyznacza obszar zaćmienia częściowego.':'Ziemia przechodzi między Słońcem a Księżycem. Księżyc zanurza się kolejno w półcieniu i cieniu Ziemi.'}</p>
@@ -381,7 +460,7 @@ function App() {
           <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
           <div className="callout">Skala widoku jest skompresowana, lecz cień korzysta z osobnej skali optycznej: 60,3 promienia Ziemi do Księżyca i 23 455 do Słońca. Plama oraz stożki wynikają z tego samego obliczenia.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
         </>}
-        <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>{cameraMode==='earth' && <div className="camera-help"><b>Nawigacja względem Ziemi</b><span>Przeciągnij — orbita · kółko — zbliżenie</span></div>}
+        {!(view==='system'&&scale==='true')&&<div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>}{cameraMode==='earth' && !(view==='system'&&scale==='true') && <div className="camera-help"><b>Nawigacja względem Ziemi</b><span>Przeciągnij — orbita · kółko — zbliżenie</span></div>}
       </aside>
       <div className="legend"><span><i className="umbra"/>Umbra</span><span><i className="penumbra"/>Penumbra</span><span>Przeciągnij · obrót</span><span>Scroll · zoom</span></div>
     </section>
