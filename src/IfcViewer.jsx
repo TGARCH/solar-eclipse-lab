@@ -55,7 +55,6 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
             geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1))
             geometry.applyMatrix4(new THREE.Matrix4().fromArray(placed.flatTransformation))
             geometry.rotateX(-Math.PI / 2)
-            geometry.scale(.001, .001, .001)
             geometry.computeBoundingSphere()
             const c = placed.color
             const material = new THREE.MeshStandardMaterial({
@@ -77,12 +76,17 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
         })
         const box = new THREE.Box3().setFromObject(root)
         const center = box.getCenter(new THREE.Vector3())
-        root.position.set(-center.x, -box.min.y, -center.z)
-        const size = box.getSize(new THREE.Vector3())
-        const distance = Math.max(size.x, size.y, size.z) * 1.45
-        camera.position.set(distance * .78, distance * .62, distance)
-        camera.near = Math.max(.01, distance / 1000)
-        camera.far = distance * 20
+        const sourceSize = box.getSize(new THREE.Vector3())
+        const normalization = 12 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z)
+        root.scale.setScalar(normalization)
+        root.position.set(-center.x * normalization, -box.min.y * normalization, -center.z * normalization)
+        const size = sourceSize.multiplyScalar(normalization)
+        const distance = 17
+        const targetY = Math.max(1.2, size.y * .38)
+        camera.position.set(11.5, 8.5, 14.5)
+        camera.near = .02
+        camera.far = 250
+        camera.lookAt(0, targetY, 0)
         camera.updateProjectionMatrix()
         if (!disposed) {
           setModel(root)
