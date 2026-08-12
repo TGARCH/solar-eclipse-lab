@@ -93,63 +93,82 @@ function SolarSystem({ running, speed, scale, selected, select, cameraMode }) {
   </>
 }
 
-function ShadowVolume({ start, end, r0, r1, color, opacity }) {
-  const length = end - start
-  const geometry = useMemo(() => {
-    const g = new THREE.CylinderGeometry(r0, r1, length, 64, 1, true)
-    g.rotateZ(Math.PI/2)
-    return g
-  }, [length,r0,r1])
-  return <mesh geometry={geometry} position={[(start+end)/2,0,0]}>
+function ShadowVolume({ origin, direction, length, r0, r1, color, opacity }) {
+  const geometry = useMemo(() => new THREE.CylinderGeometry(r1, r0, length, 64, 1, true), [length,r0,r1])
+  const quaternion = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), direction.clone().normalize()), [direction.x,direction.y,direction.z])
+  const midpoint = useMemo(() => origin.clone().add(direction.clone().normalize().multiplyScalar(length/2)), [origin.x,origin.y,origin.z,direction.x,direction.y,direction.z,length])
+  return <mesh geometry={geometry} position={midpoint} quaternion={quaternion} renderOrder={2}>
     <meshBasicMaterial color={color} transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false}/>
   </mesh>
 }
 
-function EclipseScene({ type, phase, cameraMode }) {
-  const earthGroup = useRef()
+function EclipseScene({ type, phase, cameraMode, showVolume }) {
+  const earthSpin = useRef()
   const attachedCamera = useRef()
+  const moonRef = useRef()
   const solar = type === 'solar'
-  const sunX = -42
-  const earthX = solar ? 8 : 0
-  const moonX = solar ? THREE.MathUtils.lerp(1.9, 6.75, phase) : THREE.MathUtils.lerp(4.5, 8, phase)
-  const moonY = Math.sin((phase-.5)*Math.PI) * 1.25
+  const sun = useMemo(() => new THREE.Vector3(-44,0,0), [])
+  const earth = useMemo(() => new THREE.Vector3(5,0,0), [])
   const sunR = 4.25, earthR = 1, moonR = .2724
-  const occX = solar ? moonX : earthX
+  const orbitRadius = 4.15
+  const inclination = THREE.MathUtils.degToRad(5.145)
+  const angle = (solar ? Math.PI : 0) + (phase-.5) * Math.PI * 2
+  const moon = useMemo(() => new THREE.Vector3(
+    earth.x + Math.cos(angle) * orbitRadius,
+    Math.sin(angle) * orbitRadius * Math.sin(inclination),
+    Math.sin(angle) * orbitRadius * Math.cos(inclination)
+  ), [earth.x,angle])
+  const moonLocal = moon.clone().sub(earth)
+  const orbitPoints = useMemo(() => Array.from({length:129},(_,i) => {
+    const a=i/128*Math.PI*2
+    return [Math.cos(a)*orbitRadius,Math.sin(a)*orbitRadius*Math.sin(inclination),Math.sin(a)*orbitRadius*Math.cos(inclination)]
+  }), [])
+  const occulter = solar ? moon : earth
+  const target = solar ? earth : moon
   const occR = solar ? moonR : earthR
-  const targetX = solar ? earthX : moonX
-  const d = occX - sunX
-  const umbraLength = d * occR / (sunR - occR)
-  const behind = Math.max(.01, targetX-occX)
-  const umbraAtTarget = Math.max(.01, occR - behind * (sunR-occR)/d)
-  const penumbraAtTarget = occR + behind * (sunR+occR)/d
-  useFrame((_,dt) => { if (earthGroup.current) earthGroup.current.rotation.x += dt*.045 })
+  const targetR = solar ? earthR : moonR
+  const ray = occulter.clone().sub(sun)
+  const sourceDistance = ray.length()
+  const direction = ray.normalize()
+  const toTarget = target.clone().sub(occulter)
+  const targetDistance = toTarget.dot(direction)
+  const missDistance = toTarget.clone().sub(direction.clone().multiplyScalar(targetDistance)).length()
+  const umbraLength = sourceDistance * occR / (sunR-occR)
+  const umbraAtTarget = Math.max(0,occR-targetDistance*(sunR-occR)/sourceDistance)
+  const penumbraAtTarget = occR+targetDistance*(sunR+occR)/sourceDistance
+  const aligned = targetDistance>0 && missDistance < penumbraAtTarget+targetR
+  useFrame((_,dt) => {
+    if (earthSpin.current) earthSpin.current.rotation.y += dt*.075
+    if (attachedCamera.current && moonRef.current) {
+      const p = new THREE.Vector3()
+      moonRef.current.getWorldPosition(p)
+      attachedCamera.current.lookAt(p)
+    }
+  })
   return <>
-    <ambientLight intensity={.035}/>
-    <pointLight position={[sunX,0,0]} intensity={4200} distance={100} decay={1.15} color="#fff2d2" castShadow shadow-mapSize={[2048,2048]} shadow-camera-near={.1} shadow-camera-far={80} shadow-bias={-.00012}/>
-    <mesh position={[sunX,0,0]}><sphereGeometry args={[sunR,64,64]}/><meshBasicMaterial color="#ffb32c"/></mesh>
-    <group ref={earthGroup} position={[earthX,0,0]} rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-      <mesh castShadow receiveShadow>
-        <sphereGeometry args={[earthR,64,64]}/>
-        <meshStandardMaterial color="#2867bb" roughness={.86}/>
+    <ambientLight intensity={.025}/>
+    <pointLight position={sun} intensity={4600} distance={110} decay={1.15} color="#fff2d2" castShadow shadow-mapSize={[2048,2048]} shadow-camera-near={.1} shadow-camera-far={90} shadow-bias={-.00008}/>
+    <mesh position={sun}><sphereGeometry args={[sunR,64,64]}/><meshBasicMaterial color="#ffb32c"/></mesh>
+    <group position={earth}>
+      <Line points={orbitPoints} color="#5c718f" transparent opacity={.45}/>
+      <group ref={earthSpin} rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+        <mesh castShadow receiveShadow>
+          <sphereGeometry args={[earthR,64,64]}/>
+          <meshStandardMaterial color="#2867bb" roughness={.86}/>
+        </mesh>
+        <PerspectiveCamera ref={attachedCamera} position={[0,2.7,8.5]} near={.08} far={120} fov={42}/>
+      </group>
+      <mesh ref={moonRef} position={moonLocal} castShadow receiveShadow>
+        <sphereGeometry args={[moonR,40,40]}/><meshStandardMaterial color="#aeb4bd" roughness={1}/>
       </mesh>
-      <PerspectiveCamera ref={attachedCamera} position={[2.8,1.45,4.5]} fov={44}/>
     </group>
-    <mesh position={[moonX,moonY,0]} castShadow receiveShadow>
-      <sphereGeometry args={[moonR,40,40]}/><meshStandardMaterial color="#aeb4bd" roughness={1}/>
-    </mesh>
-    {Math.abs(moonY) < .72 && <>
-      <ShadowVolume start={occX} end={occX+umbraLength} r0={occR} r1={.001} color="#080b12" opacity={.46}/>
-      <ShadowVolume start={occX} end={targetX+.4} r0={occR} r1={penumbraAtTarget} color="#536078" opacity={.105}/>
-      <mesh position={[targetX-.002,0,0]} rotation={[0,Math.PI/2,0]}>
-        <circleGeometry args={[umbraAtTarget,64]}/><meshBasicMaterial color="#020307" transparent opacity={.82} depthWrite={false}/>
-      </mesh>
-      <mesh position={[targetX-.004,0,0]} rotation={[0,Math.PI/2,0]}>
-        <ringGeometry args={[umbraAtTarget,penumbraAtTarget,64]}/><meshBasicMaterial color="#172033" transparent opacity={.46} depthWrite={false}/>
-      </mesh>
+    {showVolume && aligned && <>
+      <ShadowVolume origin={occulter} direction={direction} length={Math.min(umbraLength,targetDistance+targetR*2)} r0={occR} r1={Math.max(.002,umbraAtTarget)} color="#02040a" opacity={.34}/>
+      <ShadowVolume origin={occulter} direction={direction} length={targetDistance+targetR*2} r0={occR} r1={penumbraAtTarget} color="#71839d" opacity={.075}/>
     </>}
-    <Line points={[[sunX,0,0],[targetX,0,0]]} color="#ffcb66" transparent opacity={.2}/>
+    <Line points={[sun.toArray(),earth.toArray()]} color="#ffcb66" transparent opacity={.17}/>
     <CameraSwitch mode={cameraMode} earthCamera={attachedCamera}/>
-    {cameraMode === 'global' && <OrbitControls makeDefault target={[solar?2:0,0,0]} enableDamping minDistance={4} maxDistance={70}/>}
+    {cameraMode === 'global' && <OrbitControls makeDefault target={[2,0,0]} enableDamping minDistance={5} maxDistance={75}/>}
   </>
 }
 
@@ -170,6 +189,7 @@ function App() {
   const [eclipse,setEclipse] = useState('solar')
   const [phase,setPhase] = useState(.5)
   const [cameraMode,setCameraMode] = useState('global')
+  const [showVolume,setShowVolume] = useState(true)
   const chosen = PLANETS.find(p=>p.name===selected)
   return <main>
     <header>
@@ -185,7 +205,7 @@ function App() {
         <Stars radius={95} depth={45} count={2600} factor={3} saturation={0}/>
         <Suspense fallback={null}>{view==='system'
           ? <SolarSystem running={running} speed={speed} scale={scale} selected={selected} select={setSelected} cameraMode={cameraMode}/>
-          : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode}/>}
+          : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
         </Suspense>
       </Canvas>
       <div className="status"><i className={running?'live':''}/>{view==='system'?(running?'SYMULACJA AKTYWNA':'PAUZA'):(eclipse==='solar'?'ZAĆMIENIE SŁOŃCA':'ZAĆMIENIE KSIĘŻYCA')}</div>
@@ -201,9 +221,9 @@ function App() {
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
           <p>{eclipse==='solar'?'Księżyc blokuje tarczę Słońca. Umbra tworzy małą, ciemną plamę na Ziemi; penumbra wyznacza obszar zaćmienia częściowego.':'Ziemia przechodzi między Słońcem a Księżycem. Księżyc zanurza się kolejno w półcieniu i cieniu Ziemi.'}</p>
-          <label>Przejście przez węzeł <b>{Math.round(phase*100)}%</b><input type="range" min="0" max="1" step=".005" value={phase} onChange={e=>setPhase(+e.target.value)}/></label>
+          <label>Faza orbity Księżyca <b>{Math.round(phase*100)}%</b><input type="range" min="0" max="1" step=".005" value={phase} onChange={e=>setPhase(+e.target.value)}/></label>
           <div className="facts"><div><span>Słońce / Ziemia</span><b>109,1×</b></div><div><span>Księżyc / Ziemia</span><b>0,2724×</b></div><div><span>Ziemia–Księżyc</span><b>384 400 km</b></div><div><span>Słońce–Ziemia</span><b>1 AU</b></div></div>
-          <div className="callout">W scenie lokalnej relacje promieni są rzeczywiste. Odległość do Słońca jest jawnie skompresowana; stożki cienia są liczone z geometrii skończonej tarczy Słońca.</div>
+          <div className="callout">Promień Księżyca wynosi dokładnie 0,2724 promienia Ziemi. Orbita ma nachylenie 5,145°. Wolumetria jest edukacyjną symulacją pyłu; w próżni efekt Tyndalla nie występuje.</div><button className="volume-toggle" onClick={()=>setShowVolume(v=>!v)}>Wolumetria edukacyjna · {showVolume?"WŁ.":"WYŁ."}</button>
         </>}
         <div className="camera-row"><span>KAMERA</span><button className={cameraMode==='global'?'on':''} onClick={()=>setCameraMode('global')}>Globalna</button><button className={cameraMode==='earth'?'on':''} onClick={()=>setCameraMode('earth')}>Ziemia · rig</button></div>
       </aside>
