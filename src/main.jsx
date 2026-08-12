@@ -75,7 +75,7 @@ function Planet({ body, distance, running, speed, selected, select, earthAnchor 
   })
   return <group ref={orbit}>
     <group ref={body.name==='Ziemia'?earthAnchor:undefined} position={[distance, 0, 0]}>
-      <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
+      <mesh ref={spin} rotation={body.name==='Ziemia'?[0,0,THREE.MathUtils.degToRad(23.44)]:[0,0,0]} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
         <sphereGeometry args={[radius, 40, 40]}/>
         {body.name==='Ziemia'?<EarthMaterial/>:<meshStandardMaterial color={body.color} roughness={.78}/>}
       </mesh>
@@ -83,7 +83,12 @@ function Planet({ body, distance, running, speed, selected, select, earthAnchor 
         <ringGeometry args={[radius*1.25,radius*1.9,80]}/>
         <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
-      {body.name === 'Ziemia' && <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>} 
+      {body.name === 'Ziemia' && <>
+        <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
+          <Line points={[[0,-radius*1.55,0],[0,radius*1.55,0]]} color="#9bc6ef" transparent opacity={.72} lineWidth={1}/>
+        </group>
+        <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>
+      </>} 
       {selected === body.name && <Html center position={[0,radius+.38,0]}><div className="tag">{body.name}</div></Html>}
     </group>
   </group>
@@ -345,7 +350,7 @@ function App() {
           <ScaleLegend scale={scale}/>
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
-          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>Odległość orbity jest skompresowana wyłącznie dla czytelności.</span>}</div>
+          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Oś Ziemi: 23,44° · Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>Odległość orbity jest skompresowana wyłącznie dla czytelności.</span>}</div>
         </> : <>
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
