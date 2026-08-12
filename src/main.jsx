@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Html, Line, OrbitControls, PerspectiveCamera, Stars } from '@react-three/drei'
+import { Html, Line, OrbitControls, PerspectiveCamera, Stars, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import './styles.css'
 
@@ -33,6 +33,38 @@ function Orbit({ radius }) {
   return <Line points={points} color="#26334b" transparent opacity={.62} lineWidth={1}/>
 }
 
+const EARTH_TEXTURE_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg'
+
+function EarthMaterial() {
+  const map = useTexture(EARTH_TEXTURE_URL)
+  map.colorSpace = THREE.SRGBColorSpace
+  map.anisotropy = 8
+  return <meshStandardMaterial map={map} roughness={.82} metalness={0}/>
+}
+
+function EarthMoonSystem({ earthRadius, running, speed }) {
+  const orbit = useRef()
+  const moonRadius = earthRadius * .2724
+  const visualDistance = earthRadius * 4.6
+  const inclination = THREE.MathUtils.degToRad(5.145)
+  const orbitPoints = useMemo(() => Array.from({length:129},(_,i)=>{
+    const a=i/128*Math.PI*2
+    return [Math.cos(a)*visualDistance,0,Math.sin(a)*visualDistance]
+  }),[visualDistance])
+  useFrame((_,dt)=>{
+    if (running && orbit.current) orbit.current.rotation.y += dt * speed * (365.256 / 27.3217) * .13
+  })
+  return <group rotation={[inclination,0,0]}>
+    <Line points={orbitPoints} color="#52647e" transparent opacity={.5} lineWidth={1}/>
+    <group ref={orbit}>
+      <mesh position={[visualDistance,0,0]} castShadow receiveShadow>
+        <sphereGeometry args={[moonRadius,32,32]}/>
+        <meshStandardMaterial color="#aeb3ba" roughness={1}/>
+      </mesh>
+    </group>
+  </group>
+}
+
 function Planet({ body, distance, running, speed, selected, select, earthAnchor }) {
   const orbit = useRef()
   const spin = useRef()
@@ -45,18 +77,13 @@ function Planet({ body, distance, running, speed, selected, select, earthAnchor 
     <group ref={body.name==='Ziemia'?earthAnchor:undefined} position={[distance, 0, 0]}>
       <mesh ref={spin} castShadow receiveShadow onClick={e => { e.stopPropagation(); select(body.name) }}>
         <sphereGeometry args={[radius, 40, 40]}/>
-        <meshStandardMaterial color={body.color} roughness={.78}/>
+        {body.name==='Ziemia'?<EarthMaterial/>:<meshStandardMaterial color={body.color} roughness={.78}/>}
       </mesh>
       {body.name === 'Saturn' && <mesh rotation={[Math.PI/2,0,0]} castShadow receiveShadow>
         <ringGeometry args={[radius*1.25,radius*1.9,80]}/>
         <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
-      {body.name === 'Ziemia' && <group rotation={[0,0,THREE.MathUtils.degToRad(23.44)]}>
-        <mesh position={[radius + .16,0,0]} castShadow receiveShadow>
-          <sphereGeometry args={[Math.max(.055,radius*.2724),24,24]}/>
-          <meshStandardMaterial color="#b8bdc5" roughness={1}/>
-        </mesh>
-      </group>}
+      {body.name === 'Ziemia' && <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>} 
       {selected === body.name && <Html center position={[0,radius+.38,0]}><div className="tag">{body.name}</div></Html>}
     </group>
   </group>
@@ -278,7 +305,7 @@ function ScaleLegend({ scale }) {
   return <div className="scale-note">
     <span>SKALA WIDOKU</span>
     <strong>{scale === 'astronomical' ? 'Względna / astronomiczna' : 'Czytelna / skompresowana'}</strong>
-    <p>Promienie i okresy zachowują relacje danych NASA. Odległości są {scale === 'astronomical' ? 'mapowane logarytmicznie względem AU' : 'skompresowane funkcją potęgową'}, aby 30,07 AU mieściło się na ekranie.</p>
+    <p>Promienie planet i okresy obiegu zachowują relacje danych astronomicznych. Odległości są {scale === 'astronomical' ? 'mapowane logarytmicznie względem AU' : 'skompresowane funkcją potęgową'}, aby 30,07 AU mieściło się na ekranie.</p>
   </div>
 }
 
@@ -318,7 +345,7 @@ function App() {
           <ScaleLegend scale={scale}/>
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
-          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}</div>
+          <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>Odległość orbity jest skompresowana wyłącznie dla czytelności.</span>}</div>
         </> : <>
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
