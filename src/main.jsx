@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Html, Line, OrbitControls, PerspectiveCamera, Stars, useTexture } from '@react-three/drei'
+import { Line, OrbitControls, PerspectiveCamera, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import './styles.css'
 
@@ -88,7 +88,6 @@ function Planet({ body, distance, running, speed, selected, select, earthAnchor 
         <meshStandardMaterial color="#c7b27a" side={THREE.DoubleSide} transparent opacity={.72}/>
       </mesh>}
       {body.name === 'Ziemia' && <EarthMoonSystem earthRadius={radius} running={running} speed={speed}/>} 
-      {selected === body.name && <Html center position={[0,radius+.38,0]}><div className="tag">{body.name}</div></Html>}
     </group>
   </group>
 }
@@ -437,13 +436,16 @@ function App() {
     <section className="stage">
       <Canvas shadows dpr={[1,1.75]} camera={{position:view==='system'?[18,14,22]:[17,9,18],fov:46}} gl={{antialias:true,toneMapping:THREE.ACESFilmicToneMapping}}>
         <color attach="background" args={['#03060c']}/><fog attach="fog" args={['#03060c',42,105]}/>
-        <Stars radius={95} depth={45} count={2600} factor={3} saturation={0}/>
         <Suspense fallback={null}>{view==='system'
           ? (scale==='true' ? <TrueScaleSolarSystem running={running} speed={speed} focus={trueFocus} setFocus={setTrueFocus}/> : <SolarSystem running={running} speed={speed} scale="schematic" selected={selected} select={setSelected} cameraMode={cameraMode}/>)
           : <EclipseScene type={eclipse} phase={phase} cameraMode={cameraMode} showVolume={showVolume}/>}
         </Suspense>
       </Canvas>
       <div className="status"><i className={running?'live':''}/>{view==='system'?(running?'SYMULACJA AKTYWNA':'PAUZA'):(eclipse==='solar'?'ZAĆMIENIE SŁOŃCA':'ZAĆMIENIE KSIĘŻYCA')}</div>
+      {view==='system'&&scale==='true'&&<nav className="screen-navigator" aria-label="Nawigator obiektów w skali 1:1">
+        <span>PRZEJDŹ DO</span>
+        <div>{['Przegląd','Słońce','Merkury','Wenus','Ziemia','Księżyc','Mars','Jowisz','Saturn','Uran','Neptun'].map(name=><button key={name} className={trueFocus===name?'on':''} onClick={()=>setTrueFocus(name)}>{name}</button>)}</div>
+      </nav>}
       <aside className="panel">
         {view==='system' ? <>
           <span className="section-kicker">MODEL DANYCH</span><h2>Proporcje, które można odczytać</h2>
@@ -452,7 +454,7 @@ function App() {
           <button className="primary" onClick={()=>setRunning(v=>!v)}>{running?'Zatrzymaj orbity':'Uruchom orbity'}</button>
           <label>Tempo symulacji <b>{speed.toFixed(1)}×</b><input type="range" min=".2" max="5" step=".1" value={speed} onChange={e=>setSpeed(+e.target.value)}/></label>
           <div className="object-card"><small>WYBRANY OBIEKT</small><strong>{selected}</strong>{chosen&&<span>R = {chosen.radius.toLocaleString('pl-PL')} km · a = {chosen.au} AU<br/>Okres: {chosen.period.toLocaleString('pl-PL')} dni</span>}{selected==='Ziemia'&&<span>Oś Ziemi: 23,44° · Księżyc: R = 0,2724 R⊕ · orbita 27,3217 dnia · nachylenie 5,145°<br/>{scale==='true'?'Odległość środka Księżyca: 60,3 R⊕ — skala liniowa 1:1.':'Odległość orbity jest skompresowana wyłącznie dla czytelności.'}</span>}</div>
-        {scale==='true'&&<div className="object-nav"><span>NAWIGATOR 1:1</span><div><button className={trueFocus==='Przegląd'?'on':''} onClick={()=>setTrueFocus('Przegląd')}>Przegląd</button><button className={trueFocus==='Słońce'?'on':''} onClick={()=>setTrueFocus('Słońce')}>Słońce</button><button className={trueFocus==='Merkury'?'on':''} onClick={()=>setTrueFocus('Merkury')}>Merkury</button><button className={trueFocus==='Wenus'?'on':''} onClick={()=>setTrueFocus('Wenus')}>Wenus</button><button className={trueFocus==='Ziemia'?'on':''} onClick={()=>setTrueFocus('Ziemia')}>Ziemia</button><button className={trueFocus==='Księżyc'?'on':''} onClick={()=>setTrueFocus('Księżyc')}>Księżyc</button><button className={trueFocus==='Mars'?'on':''} onClick={()=>setTrueFocus('Mars')}>Mars</button><button className={trueFocus==='Jowisz'?'on':''} onClick={()=>setTrueFocus('Jowisz')}>Jowisz</button><button className={trueFocus==='Saturn'?'on':''} onClick={()=>setTrueFocus('Saturn')}>Saturn</button><button className={trueFocus==='Uran'?'on':''} onClick={()=>setTrueFocus('Uran')}>Uran</button><button className={trueFocus==='Neptun'?'on':''} onClick={()=>setTrueFocus('Neptun')}>Neptun</button></div></div>}</> : <>
+        </> : <>
           <span className="section-kicker">GEOMETRIA ŚWIATŁA</span><h2>Umbra i penumbra</h2>
           <div className="segmented"><button className={eclipse==='solar'?'on':''} onClick={()=>setEclipse('solar')}>Słońca</button><button className={eclipse==='lunar'?'on':''} onClick={()=>setEclipse('lunar')}>Księżyca</button></div>
           <p>{eclipse==='solar'?'Księżyc blokuje tarczę Słońca. Umbra tworzy małą, ciemną plamę na Ziemi; penumbra wyznacza obszar zaćmienia częściowego.':'Ziemia przechodzi między Słońcem a Księżycem. Księżyc zanurza się kolejno w półcieniu i cieniu Ziemi.'}</p>
