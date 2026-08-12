@@ -18,7 +18,7 @@ export default function IfcViewer({ selectedId, onSelect, onState }) {
       try {
         onState({ status: 'Inicjalizacja silnika IFC', error: null })
         api = new IfcAPI()
-        api.SetWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.78/', true)
+        api.SetWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/', true)
         await api.Init()
         const response = await fetch('/models/test.ifc')
         if (!response.ok) throw new Error('Nie udało się pobrać pliku IFC')
