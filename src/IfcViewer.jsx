@@ -119,10 +119,13 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
             const mesh=new THREE.Mesh(geometry,material);mesh.userData.info=elementInfo.get(flatMesh.expressID);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);source.delete()
           }
         })
-        const box=new THREE.Box3().setFromObject(root), center=box.getCenter(new THREE.Vector3()), sourceSize=box.getSize(new THREE.Vector3()), normalization=7.2/Math.max(sourceSize.x,sourceSize.y,sourceSize.z)
-        root.scale.setScalar(normalization);root.position.set(-center.x*normalization,-box.min.y*normalization,-center.z*normalization)
-        const size=sourceSize.multiplyScalar(normalization), targetY=Math.max(1.2,size.y*.38)
-        camera.up.set(0,1,0);camera.position.set(11.5,8.5,14.5);camera.near=.02;camera.far=250;camera.lookAt(0,targetY,0);camera.updateProjectionMatrix()
+        const box=new THREE.Box3().setFromObject(root),center=box.getCenter(new THREE.Vector3()),sourceSize=box.getSize(new THREE.Vector3())
+        const metersPerIfcUnit=.001
+        root.scale.setScalar(metersPerIfcUnit);root.position.set(-center.x*metersPerIfcUnit,-box.min.y*metersPerIfcUnit,-center.z*metersPerIfcUnit)
+        const size=sourceSize.multiplyScalar(metersPerIfcUnit),targetY=Math.max(.8,size.y*.38),span=Math.max(size.x,size.y,size.z)
+        root.userData.targetY=targetY;root.userData.metersPerIfcUnit=metersPerIfcUnit
+        const distance=Math.max(8,span*2.15)
+        camera.up.set(0,1,0);camera.position.set(distance*.78,distance*.58,distance);camera.near=.02;camera.far=500;camera.lookAt(0,targetY,0);camera.updateProjectionMatrix()
         if(!disposed){setModel(root);onState({status:'Model gotowy',error:null,meshes:root.children.length,size})}else root.traverse(o=>{o.geometry?.dispose();o.material?.dispose()})
       } catch(error){onState({status:'Błąd wczytywania',error:error.message})}
     }
@@ -142,14 +145,14 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     })
   },[model,selectedId,clippingPlane])
 
-  useEffect(()=>{if(viewMode==='site'){camera.position.set(13,15,16);camera.lookAt(0,0,0)}else{camera.position.set(11.5,8.5,14.5);camera.lookAt(0,1.6,0)}camera.updateProjectionMatrix()},[viewMode,camera])
+  useEffect(()=>{if(viewMode==='site'){camera.position.set(20,24,27);camera.lookAt(0,0,0)}else if(model){const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),distance=Math.max(8,Math.max(size.x,size.y,size.z)*2.15),targetY=model.userData.targetY||1;camera.position.set(distance*.78,distance*.58,distance);camera.lookAt(0,targetY,0)}camera.updateProjectionMatrix()},[viewMode,camera,model])
   const sunData=useMemo(()=>{
     const lat=Number(gps.lat)||52.25,lon=Number(gps.lon)||21
     const hours=solar.all?Array.from({length:11},(_,i)=>i+7):[solar.hour]
     const offset=solar.date==='03-21'?'+01:00':'+02:00'
     return hours.map(hour=>{const date=new Date(`2026-${solar.date}T${String(hour).padStart(2,'0')}:00:00${offset}`),p=SunCalc.getPosition(date,lat,lon),r=32*Math.cos(p.altitude);return {hour,altitude:p.altitude,azimuth:p.azimuth,position:[Math.sin(p.azimuth)*r,Math.max(1,32*Math.sin(p.altitude)),Math.cos(p.azimuth)*r]}}).filter(s=>s.altitude>0)
   },[gps.lat,gps.lon,solar])
-  const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:1.6,0),[viewMode])
+  const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:(model?.userData.targetY||1),0),[viewMode,model])
   const planeVisual=sectionPlane?.mode!=='off'&&(()=>{
     const horizontal=sectionPlane.mode==='horizontal', xCut=sectionPlane.mode==='vertical-x'
     const position=horizontal?[0,sectionPlane.position,0]:xCut?[sectionPlane.position,3.6,0]:[0,3.6,sectionPlane.position]
