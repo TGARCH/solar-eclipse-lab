@@ -65,7 +65,7 @@ function ParcelShape({wkt,gps}){
  const points=useMemo(()=>{const match=wkt?.match(/POLYGON\(\((.+)\)\)/);if(!match)return [];const lat0=Number(gps.lat),lon0=Number(gps.lon),cos=Math.cos(lat0*Math.PI/180);return match[1].split(',').map(pair=>{const [lon,lat]=pair.trim().split(/\s+/).map(Number);return [(lon-lon0)*111320*cos,.018,-(lat-lat0)*110540]})},[wkt,gps.lat,gps.lon])
  if(points.length<4)return null
  const shape=new THREE.Shape(points.slice(0,-1).map(p=>new THREE.Vector2(p[0],p[2])))
- return <group><Line points={points} color="#e33f4f" lineWidth={3}/><mesh position={[0,.009,0]} rotation={[-Math.PI/2,0,0]}><shapeGeometry args={[shape]}/><meshBasicMaterial color="#ef5966" transparent opacity={.12} side={THREE.DoubleSide} depthWrite={false}/></mesh></group>
+ return <Line points={points} color="#e33f4f" lineWidth={3}/>
 }
 
 function GeoportalLayer({type,gps,height,opacity=1,reloadKey=0}){
@@ -171,13 +171,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} opacity={.72} reloadKey={geoReload}/>} 
       <mesh position={[0,.008,0]} rotation={[-Math.PI/2,0,0]} receiveShadow renderOrder={4}><planeGeometry args={[40,30]}/><shadowMaterial transparent opacity={.58} depthWrite={false}/></mesh>
       <mesh position={[0,-.072,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[40,30,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
-      <Line points={[[-10,.015,-7],[8,.015,-7],[11,.015,5],[3,.015,9],[-11,.015,6],[-10,.015,-7]]} color="#64d6b5" lineWidth={2}/>
-      <Line points={[[-13,.025,-5],[13,.025,-5]]} color="#6f8590" lineWidth={7} transparent opacity={.55}/>
-      <Line points={[[-8,.03,-7],[-8,.03,6]]} color="#7f9198" lineWidth={4} transparent opacity={.45}/>
-      <mesh position={[5,.01,3]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[5,3]}/><meshBasicMaterial color="#273d43" transparent opacity={.7}/></mesh>
-      <mesh position={[-5,.01,2]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[2.2,32]}/><meshBasicMaterial color="#18362d" transparent opacity={.75}/></mesh>
-      <group position={[0,.08,0]}><axesHelper args={[2.4]}/><mesh rotation={[0,0,0]} position={[0,.35,0]}><sphereGeometry args={[.12,18,18]}/><meshBasicMaterial color="#ffffff"/></mesh></group>
-      <group position={[9,.1,7]}><mesh position={[0,.8,0]}><coneGeometry args={[.22,.7,3]}/><meshBasicMaterial color="#e5eef0"/></mesh><Line points={[[0,0,0],[0,.65,0]]} color="#e5eef0" lineWidth={2}/></group>
+      <group position={[-18,.025,13]}><Line points={[[0,0,0],[10,0,0]]} color="#25343a" lineWidth={3}/>{[0,5,10].map(x=><Line key={x} points={[[x,0,-.35],[x,0,.35]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
     {model&&<primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/>}
     {planeVisual}
