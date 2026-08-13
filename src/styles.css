@@ -114,3 +114,11 @@ h1{color:#17242b}h1 em{color:#657982}.eyebrow,.section-kicker{color:#6c858d}
 .gps-fields input{background:#fff;border-color:#c7d4d8;color:#1c2b31}.solar-analysis,.ifc-selection{border-color:#d2dde0}
 .legend,footer{color:#607780}.site-tool>small,.parcel-result span,.parcel-result small{color:#657d83}
 .sheet-target{background:#e5f3ef;border-color:#b8d8cf;color:#247c65}.mapping-note,.import-match{background:#eef5f3}
+
+/* PZT typography — aligned with the IFC workspace */
+.site-tool,.site-tool button,.site-tool input,.site-tool select,.site-tool output{font-family:Inter,system-ui,sans-serif}
+.site-tool>span,.solar-analysis>span,.layers-title,.map-size-field b{font-family:"Space Grotesk",Inter,sans-serif;font-weight:600}
+.site-tool input,.site-tool output{font-variant-numeric:tabular-nums}
+.map-size-field{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 0!important;color:#50666d;font-size:9px}
+.map-size-field b{float:none!important;font-size:9px;letter-spacing:.04em}
+.map-size-field select{border:1px solid #c7d4d8;border-radius:7px;background:#fff;color:#26383e;padding:6px 8px;font-size:9px}
