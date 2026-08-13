@@ -3,6 +3,7 @@ import { Line, OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { IfcAPI } from 'web-ifc'
+import SunCalc from 'suncalc'
 
 const valueOf = value => value && typeof value === 'object' && 'value' in value ? value.value : value
 
@@ -63,10 +64,10 @@ function SectionCaps({model, plane, sectionPlane}) {
 function GeoportalLayer({type,gps,height,opacity=1}){
  const [texture,setTexture]=useState(null)
  useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon])
- return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1}><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
+ return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={} }) {
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, solar={date:'03-21',hour:12,all:false} }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -135,6 +136,12 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
   },[model,selectedId,clippingPlane])
 
   useEffect(()=>{if(viewMode==='site'){camera.position.set(13,15,16);camera.lookAt(0,0,0)}else{camera.position.set(11.5,8.5,14.5);camera.lookAt(0,1.6,0)}camera.updateProjectionMatrix()},[viewMode,camera])
+  const sunData=useMemo(()=>{
+    const lat=Number(gps.lat)||52.25,lon=Number(gps.lon)||21
+    const hours=solar.all?Array.from({length:11},(_,i)=>i+7):[solar.hour]
+    const offset=solar.date==='03-21'?'+01:00':'+02:00'
+    return hours.map(hour=>{const date=new Date(`2026-${solar.date}T${String(hour).padStart(2,'0')}:00:00${offset}`),p=SunCalc.getPosition(date,lat,lon),r=32*Math.cos(p.altitude);return {hour,altitude:p.altitude,azimuth:p.azimuth,position:[Math.sin(p.azimuth)*r,Math.max(1,32*Math.sin(p.altitude)),Math.cos(p.azimuth)*r]}}).filter(s=>s.altitude>0)
+  },[gps.lat,gps.lon,solar])
   const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:1.6,0),[viewMode])
   const planeVisual=sectionPlane?.mode!=='off'&&(()=>{
     const horizontal=sectionPlane.mode==='horizontal', xCut=sectionPlane.mode==='vertical-x'
@@ -144,7 +151,8 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
   })()
   return <>
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
-    <directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>
+    {viewMode!=='site'&&<directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>}
+    {viewMode==='site'&&sunData.map(s=><directionalLight key={s.hour} position={s.position} intensity={solar.all?.32:2.8} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-18} shadow-camera-right={18} shadow-camera-top={18} shadow-camera-bottom={-18} shadow-bias={-.0002}/>)}
     <gridHelper args={[80,80,'#5c7687','#273746']} position={[0,-.012,0]}/>
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.03}/>} 
