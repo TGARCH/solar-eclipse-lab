@@ -71,3 +71,12 @@
 .section-tool input{grid-column:1;width:100%;margin:0!important;accent-color:#60d5b4}
 .section-tool output{grid-column:2;grid-row:1/3;color:#79dec1;font-size:9px;font-variant-numeric:tabular-nums}
 @media(max-width:850px){.section-tool{left:12px;top:50px;width:calc(100% - 24px)}}
+
+.structure-view{display:grid;gap:10px}
+.identity-card{position:relative;display:grid;gap:3px;padding:12px;border:1px solid #31555b;border-radius:12px;background:linear-gradient(135deg,#10272c,#0b171d)}
+.identity-card span{font-size:8px;letter-spacing:.16em;color:#76999d}.identity-card strong{font-family:"Space Grotesk";font-size:19px;color:#dff3ef}.identity-card small{font-size:8px;color:#6f898e}.identity-card i{position:absolute;right:10px;top:10px;font-style:normal;font-size:7px;color:#79dec1;background:#173b34;border-radius:99px;padding:4px 7px}
+.structure-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.structure-actions button{border:1px solid #2a454d;background:#0b171e;color:#8fa8ad;border-radius:7px;padding:7px 3px;font-size:8px}.structure-actions button:hover{border-color:#62cdaa;color:#dff5ee}
+.structure-view>.data-title{margin:5px 0 0}.structure-tree{display:grid;gap:4px}
+.tree-row{--level:0;display:grid;grid-template-columns:8px 1fr auto;gap:8px;align-items:center;margin-left:calc(var(--level)*14px);padding:8px 9px;border:1px solid #263f47;border-radius:9px;background:#0a161c}
+.tree-row>i{width:7px;height:7px;border-radius:50%;background:#61d2ae;box-shadow:0 0 8px #61d2ae66}.tree-row.missing>i{background:#dc9d55}.tree-row.draft>i{background:#81969c}.tree-row>div{display:grid;gap:2px;min-width:0}.tree-row span{font-size:7px;letter-spacing:.13em;color:#637e85}.tree-row b{font-size:10px;color:#dce8e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tree-row small{font-size:8px;color:#728a90}.tree-row>em{font-style:normal;color:#5f7b82;font-size:16px}
+.import-match{border-left:2px solid #61cbaa;border-radius:7px;background:#0c191d;padding:10px}.import-match>div{display:grid;gap:3px}.import-match span{font-size:7px;letter-spacing:.15em;color:#709097}.import-match b{font-size:10px}.import-match ol{display:flex;gap:5px;list-style:none;padding:0;margin:8px 0}.import-match li{font-size:7px;border:1px solid #2b454d;border-radius:99px;padding:4px 6px;color:#88a1a7}.import-match p{font-size:8px!important;line-height:1.45!important;margin:0!important;color:#758d92!important}
