@@ -24,9 +24,10 @@ export default async function handler(req,res){
   }
   if(!SERVICES[type])return res.status(400).json({error:'Nieznany typ warstwy'})
   const dLat=.0018,dLon=.0028/Math.max(.3,Math.cos(y*Math.PI/180)),layers=await layerNames(SERVICES[type],type)
-  if(req.query.debug==='1')return res.status(200).json({service:SERVICES[type],layers})
   const params=new URLSearchParams({SERVICE:'WMS',REQUEST:'GetMap',VERSION:'1.3.0',FORMAT:'image/png',TRANSPARENT:type==='ortho'?'FALSE':'TRUE',CRS:'EPSG:4326',BBOX:`${y-dLat},${x-dLon},${y+dLat},${x+dLon}`,WIDTH:'1024',HEIGHT:'768',LAYERS:layers.join(','),STYLES:''})
-  const response=await fetch(SERVICES[type]+'?'+params),buffer=Buffer.from(await response.arrayBuffer())
+  const mapUrl=SERVICES[type]+'?'+params.toString()
+  if(req.query.debug==='1')return res.status(200).json({service:SERVICES[type],layers,mapUrl})
+  const response=await fetch(mapUrl),buffer=Buffer.from(await response.arrayBuffer())
   res.setHeader('Content-Type',response.headers.get('content-type')||'image/png');res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=86400');return res.status(response.ok?200:502).send(buffer)
  }catch(error){return res.status(500).json({error:error.message})}
 }
