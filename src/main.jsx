@@ -87,6 +87,23 @@ const TABS = [
 ]
 const labels={ifc:'IFC',derived:'WYLICZONE',manual:'RĘCZNE',assumption:'ZAŁOŻENIE',missing:'BRAK'}
 
+function ProjectStructure(){
+ const rows=[
+  {type:'ZLECENIE',name:'Zlecenie 01 · Projekt budowlany',meta:'Aktywne · zakres PZT + PAB + PT',level:0,status:'active'},
+  {type:'ETAP',name:'Etap I',meta:'Model roboczy · 2021',level:1,status:'active'},
+  {type:'BUDYNEK',name:'Budynek A · usługowy',meta:'IFC · 2 kondygnacje · 13,03 m²',level:2,status:'ifc'},
+  {type:'DZIAŁKA',name:'Działka — do przypisania',meta:'Brak numeru ewidencyjnego',level:2,status:'missing'},
+  {type:'DOKUMENTY',name:'Dokumenty źródłowe',meta:'Mapa · MPZP · przyłącza · geotechnika',level:1,status:'missing'},
+  {type:'PUBLIKACJE',name:'PZT · PAB · PT · BIOZ',meta:'Brak zatwierdzonego wydania',level:1,status:'draft'}]
+ return <div className="structure-view">
+  <div className="identity-card"><span>IDENTYFIKATOR INWESTYCJI</span><strong>PRJ-MIK-05-21</strong><small>IfcProject.GlobalId + numer projektu</small><i>Pewne dopasowanie</i></div>
+  <div className="structure-actions"><button>＋ Zlecenie</button><button>＋ Etap</button><button>＋ Obiekt</button><button>＋ Działka</button></div>
+  <span className="data-title">STRUKTURA BIEŻĄCEGO PROJEKTU</span>
+  <div className="structure-tree">{rows.map((r,i)=><div key={r.type+i} className={'tree-row '+r.status} style={{'--level':r.level}}><i/><div><span>{r.type}</span><b>{r.name}</b><small>{r.meta}</small></div><em>›</em></div>)}</div>
+  <div className="import-match"><div><span>KOLEJNY IMPORT IFC</span><b>Najpierw wyszukaj istniejący projekt</b></div><ol><li>Project ID</li><li>IfcProject.GlobalId</li><li>Numer + adres + działki</li></ol><p>Zmiany geometrii zostaną porównane. Dane ręczne i zatwierdzone nie będą nadpisywane.</p></div>
+ </div>
+}
+
 function Field({f}){return <div className="mapping-field"><div><span>{f[0]}</span><b className={f[2]}>{f[1]}</b></div><i className={f[2]}>{labels[f[2]]}</i><small>BAZA → {f[3]}</small><code>{f[4]}</code></div>}
 function App(){
  const [selectedIfc,setSelectedIfc]=useState(null),[ifcState,setIfcState]=useState({status:'Oczekiwanie na model',error:null,meshes:0}),[tab,setTab]=useState('main'),[sectionPlane,setSectionPlane]=useState({mode:'off',position:3.2})
@@ -98,9 +115,9 @@ function App(){
  return <main className="bim-mode data-hub"><header><div><span className="eyebrow">OPEN BIM · IFC4 · DANE PROJEKTOWE</span><h1>IFC <em>Data Hub</em></h1></div><div className="project-meta"><span>TEST3.IFC</span><b>{ready}/{all.length} pól gotowych</b></div></header>
  <section className="stage"><Canvas shadows dpr={[1,1.75]} camera={{position:[11,8,14],fov:46}} gl={{antialias:true,stencil:true,toneMapping:THREE.ACESFilmicToneMapping}} onCreated={({gl})=>{gl.localClippingEnabled=true}}><color attach="background" args={['#0a1118']}/><Suspense fallback={null}><IfcViewer selectedId={selectedIfc?.id} onSelect={setSelectedIfc} onState={handleIfcState} sectionPlane={sectionPlane}/></Suspense></Canvas>
  <div className="status"><i className={!ifcState.error?'live':''}/>{ifcState.status}</div><div className="section-tool"><span>PRZEKRÓJ MODELU</span><div><button className={sectionPlane.mode==='off'?'on':''} onClick={()=>setSectionPlane(p=>({...p,mode:'off'}))}>Wył.</button><button className={sectionPlane.mode==='horizontal'?'on':''} onClick={()=>setSectionPlane({mode:'horizontal',position:3.2})}>Poziomy</button><button className={sectionPlane.mode==='vertical-x'?'on':''} onClick={()=>setSectionPlane({mode:'vertical-x',position:0})}>Pionowy X</button><button className={sectionPlane.mode==='vertical-z'?'on':''} onClick={()=>setSectionPlane({mode:'vertical-z',position:0})}>Pionowy Z</button></div>{sectionPlane.mode!=='off'&&<label><b>Położenie płaszczyzny</b><input type="range" min={sectionPlane.mode==='horizontal'?0:-4.5} max={sectionPlane.mode==='horizontal'?7.2:4.5} step="0.05" value={sectionPlane.position} onChange={e=>setSectionPlane(p=>({...p,position:Number(e.target.value)}))}/><output>{sectionPlane.position.toFixed(2)} m</output></label>}</div>
- <aside className="panel workflow-panel"><div className="workflow-head"><div><span className="section-kicker">STRUKTURA DANYCH I EKSPORTU</span><h2>{tab==='export'?'Eksport do bazy':current.title}</h2></div><span className="sheet-target">BAZA</span></div>
- <nav className="workflow-tabs">{TABS.map(t=><button key={t.id} className={tab===t.id?'on':''} onClick={()=>setTab(t.id)}>{t.label}</button>)}<button className={tab==='export'?'on':''} onClick={()=>setTab('export')}>Eksport</button></nav>
- {tab!=='export'?<div className="workflow-content">{current.groups.map(g=><section className="field-group" key={g.name}><h3>{g.name}</h3>{g.fields.map(f=><Field key={f[0]} f={f}/>)}</section>)}
+ <aside className="panel workflow-panel"><div className="workflow-head"><div><span className="section-kicker">STRUKTURA DANYCH I EKSPORTU</span><h2>{tab==='export'?'Eksport do bazy':tab==='structure'?'Struktura inwestycji':current.title}</h2></div><span className="sheet-target">BAZA</span></div>
+ <nav className="workflow-tabs">{TABS.map(t=><button key={t.id} className={tab===t.id?'on':''} onClick={()=>setTab(t.id)}>{t.label}</button>)}<button className={tab==='structure'?'on':''} onClick={()=>setTab('structure')}>Struktura</button><button className={tab==='export'?'on':''} onClick={()=>setTab('export')}>Eksport</button></nav>
+ {tab==='structure'?<ProjectStructure/>:tab!=='export'?<div className="workflow-content">{current.groups.map(g=><section className="field-group" key={g.name}><h3>{g.name}</h3>{g.fields.map(f=><Field key={f[0]} f={f}/>)}</section>)}
  <div className={'ifc-selection '+(selectedIfc?'selected':'')}><span className="data-title">WYBRANY ELEMENT MODELU</span>{selectedIfc?<><strong>{selectedIfc.name}</strong><span>{selectedIfc.type} · #{selectedIfc.id}</span><code>{selectedIfc.globalId}</code></>:<p>Kliknij element, aby powiązać go z polem dokumentacji.</p>}</div></div>:
  <div className="export-view"><div className="export-score"><span>GOTOWOŚĆ REKORDU BAZA</span><strong>{ready}<small> / {all.length} pól</small></strong><div><i style={{width:(ready/all.length*100)+'%'}}/></div><p>Eksport zawiera dane odczytane z IFC, wartości wyliczone, ręczne i jawne założenia. Brakujące pola pozostają do uzupełnienia.</p></div>
  <button className="export-button" onClick={exportRecord}>Pobierz mapowanie JSON</button><a className="sheet-link" href={DOCS.BAZA} target="_blank" rel="noreferrer">Otwórz arkusz „Baza danych” ↗</a>
