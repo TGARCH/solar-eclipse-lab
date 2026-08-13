@@ -161,16 +161,61 @@ const ENERGY_FIELDS={
   {id:'renewableShare',label:'Udział OZE',value:'',unit:'%',source:'result'}
  ]
 }
+const SYSTEM_PRESETS=[
+ {id:'recommended',name:'Pompa ciepła + podłogówka',tag:'REKOMENDOWANY',desc:'Najbezpieczniejszy punkt startowy dla nowego, dobrze ocieplonego budynku.',values:{heatingSystem:'Pompa ciepła powietrze/woda',energyCarrier:'Energia elektryczna',heatingGeneration:'3.20',heatingDistribution:'0.96',heatingControl:'0.93',ventilationType:'Wentylacja mechaniczna z odzyskiem',heatRecovery:'80',dhwSystem:'Pompa ciepła',dhwEfficiency:'2.60',primaryFactor:'2.50'}},
+ {id:'gas',name:'Kocioł gazowy + grzejniki',tag:'WARIANT',desc:'Wybierz tylko wtedy, gdy projekt rzeczywiście przewiduje przyłącze gazowe.',values:{heatingSystem:'Kocioł gazowy kondensacyjny',energyCarrier:'Gaz ziemny',heatingGeneration:'0.94',heatingDistribution:'0.92',heatingControl:'0.88',ventilationType:'Wentylacja grawitacyjna',heatRecovery:'0',dhwSystem:'Kocioł gazowy',dhwEfficiency:'0.82',primaryFactor:'1.10'}},
+ {id:'electric',name:'Ogrzewanie elektryczne',tag:'PROSTY',desc:'Prosta instalacja, ale zwykle wysoki wskaźnik EP bez instalacji fotowoltaicznej.',values:{heatingSystem:'Ogrzewanie elektryczne bezpośrednie',energyCarrier:'Energia elektryczna',heatingGeneration:'1.00',heatingDistribution:'1.00',heatingControl:'0.95',ventilationType:'Wentylacja mechaniczna z odzyskiem',heatRecovery:'80',dhwSystem:'Podgrzewacz elektryczny',dhwEfficiency:'0.88',primaryFactor:'2.50'}}
+]
 function EnergyWorkspace({values,onChange}){
- const [step,setStep]=useState('building')
+ const [step,setStep]=useState('building'),[advanced,setAdvanced]=useState(false),[calcState,setCalcState]=useState('idle')
  const fields=ENERGY_FIELDS[step]||[]
  const resolved=Object.values(values).filter(v=>String(v).trim()).length,total=Object.values(ENERGY_FIELDS).flat().length
- const exportEnergy=()=>{const payload={format:'Projektowana charakterystyka energetyczna',version:1,generatedAt:new Date().toISOString(),values};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='dane-charakterystyki-energetycznej.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ const n=id=>Number(String(values[id]??'').replace(',','.'))||0
+ const missingRequired=['windowArea','doorArea','airFlow'].filter(id=>!String(values[id]??'').trim())
+ const applyPreset=preset=>{Object.entries(preset.values).forEach(([id,value])=>onChange(id,value));setCalcState('idle')}
+ const calculate=()=>{
+  const area=Math.max(n('heatedArea'),1),volume=Math.max(n('heatedVolume'),1)
+  const airflow=n('airFlow')||volume*.5
+  const htrBase=n('wallArea')*n('wallU')+n('roofArea')*n('roofU')+n('floorArea')*n('floorU')+n('windowArea')*n('windowU')+n('doorArea')*n('doorU')
+  const htr=htrBase*1.05
+  const recovery=Math.min(Math.max(n('heatRecovery')/100,0),.95)
+  const hve=.34*airflow*(1-recovery)
+  const euHeating=(htr+hve)*82*.72/area
+  const euDhw=25
+  const heatingEfficiency=Math.max(n('heatingGeneration')*n('heatingDistribution')*n('heatingControl'),.1)
+  const dhwEfficiency=Math.max(n('dhwEfficiency'),.1)
+  const ek=euHeating/heatingEfficiency+euDhw/dhwEfficiency
+  const ep=ek*Math.max(n('primaryFactor'),0)
+  const renewable=Math.max(0,Math.min(100,(1-1/Math.max(n('heatingGeneration'),1))*100))
+  ;[['htr',htr.toFixed(1)],['hve',hve.toFixed(1)],['euHeating',euHeating.toFixed(1)],['euDhw',euDhw.toFixed(1)],['ek',ek.toFixed(1)],['ep',ep.toFixed(1)],['co2',(ek*.0007).toFixed(3)],['renewableShare',renewable.toFixed(0)]].forEach(([id,value])=>onChange(id,value))
+  if(!n('airFlow'))onChange('airFlow',airflow.toFixed(1))
+  setCalcState(missingRequired.length?'estimated':'calculated');setStep('results')
+ }
+ const exportEnergy=()=>{const payload={format:'Projektowana charakterystyka energetyczna',version:2,status:calcState,generatedAt:new Date().toISOString(),values};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));a.download='dane-charakterystyki-energetycznej.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+ const reportRows=[
+  ['Budynek',values.buildingType,'Dane ręczne'],['Powierzchnia ogrzewana Af',values.heatedArea+' m²','IFC'],['Kubatura ogrzewana Ve',values.heatedVolume+' m³','IFC'],
+  ['Ogrzewanie',values.heatingSystem,'Wybrany wariant'],['Wentylacja',values.ventilationType,'Wybrany wariant'],['Ciepła woda',values.dhwSystem,'Wybrany wariant']
+ ]
  return <div className="energy-workspace">
-  <div className="energy-intro"><div><span>CEL MODUŁU</span><b>Projektowana charakterystyka energetyczna wg IFC</b><p>IFC dostarcza geometrię i powierzchnie. Założenia projektowe uzupełniasz tutaj. Wyniki zostaną obliczone w kolejnym etapie.</p></div><strong>{resolved}<small> / {total}</small></strong></div>
+  <div className="energy-intro"><div><span>CEL MODUŁU</span><b>Projektowana charakterystyka energetyczna wg IFC</b><p>Model podaje geometrię. Ty wybierasz zrozumiały wariant instalacji, a aplikacja pokazuje założenia i wynik wstępny.</p></div><strong>{resolved}<small> / {total}</small></strong></div>
+  <div className="energy-calc-bar"><div><b>{calcState==='idle'?'Obliczenia nie zostały uruchomione':calcState==='estimated'?'Wynik wstępny — użyto wartości domyślnych':'Obliczenia wstępne wykonane'}</b><span>{missingRequired.length?missingRequired.length+' pola wymagają sprawdzenia':'Dane potrzebne do obliczeń są uzupełnione'}</span></div><button onClick={calculate}>Oblicz charakterystykę</button></div>
   <nav className="energy-steps">{ENERGY_STEPS.map(item=><button key={item.id} className={step===item.id?'on':''} onClick={()=>setStep(item.id)}>{item.label}</button>)}</nav>
-  {step!=='report'?<div className="energy-fields">{fields.map(field=>{const value=values[field.id]??field.value,editable=!['ifc','result'].includes(field.source);return <label key={field.id} className={'energy-field '+field.source}><span>{field.label}<i>{labels[field.source]||'DANE'}</i></span><div><input value={value} readOnly={!editable} placeholder={field.source==='result'?'Po uruchomieniu obliczeń':'Uzupełnij'} onChange={e=>onChange(field.id,e.target.value)}/>{field.unit&&<em>{field.unit}</em>}</div>{field.source==='ifc'&&<small>Odczyt z modelu IFC</small>}{field.source==='result'&&<small>Wynik obliczeniowy - pole tylko do odczytu</small>}</label>})}</div>:
-  <div className="energy-report-card"><div className="report-head"><span>KARTA UPROSZCZONA</span><h3>Projektowana charakterystyka energetyczna</h3><p>{values.buildingType||'Rodzaj budynku do uzupełnienia'} · Af {values.heatedArea||'—'} m² · Ve {values.heatedVolume||'—'} m³</p></div><div className="report-kpis">{[['EU',values.euHeating],['EK',values.ek],['EP',values.ep],['EPmax',values.epMax]].map(([k,v])=><div key={k}><span>{k}</span><b>{v||'—'}</b><small>kWh/(m²·rok)</small></div>)}</div><div className="report-readiness"><b>Gotowość danych: {resolved}/{total}</b><p>Pełny raport będzie obejmował przegrody, stolarkę, systemy ogrzewania, wentylacji i c.w.u., wyniki EU/EK/EP oraz analizę wariantu alternatywnego - zgodnie ze wzorcem BuildDesk.</p></div><div className="report-actions"><button onClick={exportEnergy}>Eksportuj dane raportu</button><button onClick={()=>window.print()}>Drukuj kartę uproszczoną</button></div></div>}
+  {step==='systems'?<div className="systems-guide">
+   <div className="guide-note"><b>Nie musisz wpisywać sprawności samodzielnie</b><p>Wybierz wariant najbardziej zbliżony do projektu. Wszystkie techniczne wartości uzupełnimy automatycznie. Przed wydaniem raportu powinien je potwierdzić projektant instalacji.</p></div>
+   <div className="preset-grid">{SYSTEM_PRESETS.map(p=><button key={p.id} className={values.heatingSystem===p.values.heatingSystem?'selected':''} onClick={()=>applyPreset(p)}><span>{p.tag}</span><b>{p.name}</b><small>{p.desc}</small><em>{values.heatingSystem===p.values.heatingSystem?'Wybrany':'Wybierz wariant'}</em></button>)}</div>
+   <div className="simple-system-check"><label><span>Czy jest wentylacja z rekuperacją?</span><select value={Number(values.heatRecovery)>0?'yes':'no'} onChange={e=>{onChange('heatRecovery',e.target.value==='yes'?'80':'0');onChange('ventilationType',e.target.value==='yes'?'Wentylacja mechaniczna z odzyskiem':'Wentylacja grawitacyjna')}}><option value="yes">Tak</option><option value="no">Nie</option></select></label><label><span>Projektowany strumień powietrza</span><div><input value={values.airFlow} placeholder="Jeśli nie wiesz — zostaw puste" onChange={e=>onChange('airFlow',e.target.value)}/><em>m³/h</em></div><small>Puste pole zostanie oszacowane z kubatury i wyraźnie oznaczone w wyniku.</small></label></div>
+   <button className="advanced-toggle" onClick={()=>setAdvanced(v=>!v)}>{advanced?'Ukryj parametry techniczne':'Pokaż parametry techniczne (dla instalatora)'}</button>
+   {advanced&&<div className="energy-fields">{fields.filter(f=>!['heatingSystem','ventilationType','airFlow'].includes(f.id)).map(field=>{const value=values[field.id]??field.value;return <label key={field.id} className={'energy-field '+field.source}><span>{field.label}<i>{labels[field.source]||'DANE'}</i></span><div><input value={value} placeholder="Uzupełnij" onChange={e=>{onChange(field.id,e.target.value);setCalcState('idle')}}/>{field.unit&&<em>{field.unit}</em>}</div></label>})}</div>}
+  </div>:step!=='report'?<div className="energy-fields">{fields.map(field=>{const value=values[field.id]??field.value,editable=!['ifc','result'].includes(field.source);return <label key={field.id} className={'energy-field '+field.source}><span>{field.label}<i>{labels[field.source]||'DANE'}</i></span><div><input value={value} readOnly={!editable} placeholder={field.source==='result'?'Kliknij „Oblicz charakterystykę”':'Uzupełnij'} onChange={e=>{onChange(field.id,e.target.value);setCalcState('idle')}}/>{field.unit&&<em>{field.unit}</em>}</div>{field.source==='ifc'&&<small>Odczyt z modelu IFC</small>}{field.source==='result'&&<small>Wynik wstępny - pole tylko do odczytu</small>}</label>})}</div>:
+  <div className="energy-report-card">
+   <div className="report-head"><span>RAPORT ROBOCZY · OBLICZENIA WSTĘPNE</span><h3>Projektowana charakterystyka energetyczna</h3><p>{values.buildingType||'Rodzaj budynku do uzupełnienia'} · Af {values.heatedArea||'—'} m² · Ve {values.heatedVolume||'—'} m³</p></div>
+   <div className={'report-status '+calcState}><b>{calcState==='idle'?'Najpierw uruchom obliczenia':calcState==='estimated'?'Wynik wymaga potwierdzenia danych':'Wynik obliczony'}</b><span>{calcState==='idle'?'Przycisk znajduje się nad zakładkami.':calcState==='estimated'?'Część wartości została oszacowana automatycznie.':'Wszystkie wymagane pola były uzupełnione.'}</span></div>
+   <div className="report-kpis">{[['EU',values.euHeating],['EK',values.ek],['EP',values.ep],['EPmax',values.epMax]].map(([k,v])=><div key={k}><span>{k}</span><b>{v||'—'}</b><small>kWh/(m²·rok)</small></div>)}</div>
+   <section className="report-section"><h4>1. Dane przyjęte do obliczeń</h4>{reportRows.map(row=><div className="report-row" key={row[0]}><span>{row[0]}</span><b>{row[1]||'Do uzupełnienia'}</b><em>{row[2]}</em></div>)}</section>
+   <section className="report-section"><h4>2. Przegrody i izolacyjność</h4>{[['Ściany',values.wallArea+' m² · U '+values.wallU],['Dach',values.roofArea+' m² · U '+values.roofU],['Podłoga',values.floorArea+' m² · U '+values.floorU],['Okna',values.windowArea?values.windowArea+' m² · Uw '+values.windowU:'Powierzchnia do uzupełnienia'],['Drzwi',values.doorArea?values.doorArea+' m² · Ud '+values.doorU:'Powierzchnia do uzupełnienia']].map(row=><div className="report-row" key={row[0]}><span>{row[0]}</span><b>{row[1]}</b></div>)}</section>
+   <section className="report-section"><h4>3. Ocena wyniku</h4><p>{values.ep?Number(values.ep)<=Number(values.epMax)?'Wstępny wskaźnik EP nie przekracza przyjętego limitu EPmax.':'Wstępny wskaźnik EP przekracza przyjęty limit EPmax — wariant wymaga korekty.':'Brak wyniku. Uruchom obliczenia.'}</p><small>To obliczenie pomocnicze do pracy projektowej. Przed wykorzystaniem w dokumentacji urzędowej dane i metodę powinien sprawdzić uprawniony specjalista.</small></section>
+   <div className="report-actions"><button onClick={calculate}>Przelicz ponownie</button><button onClick={exportEnergy}>Eksportuj dane</button><button onClick={()=>window.print()}>Drukuj raport</button></div>
+  </div>}
  </div>
 }
 
