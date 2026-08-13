@@ -169,9 +169,9 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     {viewMode!=='site'&&<gridHelper args={[80,80,'#bcc9ce','#e1e7e9']} position={[0,-.012,0]}/>}
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
-      {geoLayers.egib&&parcel?.geometry&&<ParcelShape wkt={parcel.geometry} gps={gps}/>}  
-      {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>} 
-      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
+      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.006} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
+      {geoLayers.gesut&&<GeoportalLayer type="gesut" gps={gps} height={.012} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
+      {geoLayers.bdot&&<GeoportalLayer type="bdot" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
       <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]}><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
