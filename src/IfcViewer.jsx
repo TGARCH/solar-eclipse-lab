@@ -82,7 +82,7 @@ function GpsOriginSun({position,intensity,...props}){
  return <directionalLight ref={light} position={position} intensity={intensity} {...props}/>
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false}, topViewSignal=0 }) {
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false}, topViewSignal=0, siteOffset={x:0,y:0} }) {
   const { camera, controls } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -163,9 +163,10 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
   useEffect(()=>{
     if(viewMode!=='site'||!topViewSignal)return
     const height=Math.max(80,mapSize*.82)
-    camera.up.set(0,0,-1);camera.position.set(0,height,0);camera.near=.05;camera.far=Math.max(2000,mapSize*8);camera.lookAt(0,0,0);camera.updateProjectionMatrix()
+    const north=THREE.MathUtils.degToRad(siteRotation)
+    camera.up.set(-Math.sin(north),0,-Math.cos(north));camera.position.set(0,height,0);camera.near=.05;camera.far=Math.max(2000,mapSize*8);camera.lookAt(0,0,0);camera.updateProjectionMatrix()
     if(controls){controls.target.set(0,0,0);controls.update()}
-  },[topViewSignal,viewMode,camera,controls,mapSize])
+  },[topViewSignal,viewMode,camera,controls,mapSize,siteRotation])
   const sunData=useMemo(()=>{
     const lat=Number(gps.lat)||52.25,lon=Number(gps.lon)||21
     const hours=solar.all?Array.from({length:11},(_,i)=>i+7):[solar.hour]
@@ -182,17 +183,20 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     return <mesh position={position} rotation={rotation} renderOrder={4}><planeGeometry args={[11,8]}/><meshBasicMaterial color="#88a9b5" transparent opacity={.025} side={THREE.DoubleSide} depthWrite={false} depthTest={false}/></mesh>
   })()
   return <>
-    <hemisphereLight intensity={viewMode==='site'?.32:.82} color="#dcecff" groundColor="#15202a"/>
+    <hemisphereLight intensity={viewMode==='site'?(solar.all?.12:.32):.82} color="#dcecff" groundColor="#15202a"/>
     {viewMode!=='site'&&<directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>}
-    {viewMode==='site'&&sunData.map(s=><GpsOriginSun key={`${gpsFrameKey}:${s.hour}`} position={s.position} intensity={solar.all?.12:3.1} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent} shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent} shadow-bias={-.0002}/>)}
+    {viewMode==='site'&&sunData.map(s=><GpsOriginSun key={`${gpsFrameKey}:${s.hour}`} position={s.position} intensity={solar.all?.28:3.1} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent} shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent} shadow-bias={-.0002}/>)}
     {viewMode!=='site'&&<gridHelper args={[80,80,'#bcc9ce','#e1e7e9']} position={[0,-.012,0]}/>}
     {viewMode==='site'&&<group key={gpsFrameKey} name="GPS local frame — origin 0,0,0" position={[0,0,0]} rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
-      {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
-      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.006} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
-      {geoLayers.gesut&&<GeoportalLayer type="gesut" gps={gps} height={.012} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
-      {geoLayers.bdot&&<GeoportalLayer type="bdot" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
-      <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={1} metalness={0}/></mesh>
-      <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
+      <group name="Map offset in east-north axes" position={[siteOffset.x,0,-siteOffset.y]}>
+        {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
+        {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.006} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
+        {geoLayers.gesut&&<GeoportalLayer type="gesut" gps={gps} height={.012} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
+        {geoLayers.bdot&&<GeoportalLayer type="bdot" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
+        <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={1} metalness={0}/></mesh>
+        <mesh position={[0,.018,0]} rotation={[-Math.PI/2,0,0]} receiveShadow renderOrder={5}><planeGeometry args={[mapSize,mapSize]}/><shadowMaterial transparent opacity={solar.all?.72:.38} depthWrite={false}/></mesh>
+        <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
+      </group>
     </group>}
     {model&&<group name="IFC fixed origin 0,0,0" position={[0,0,0]}><primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/></group>}
     {planeVisual}
