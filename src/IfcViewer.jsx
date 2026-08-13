@@ -71,7 +71,7 @@ function ParcelShape({wkt,gps}){
 function GeoportalLayer({type,gps,height,opacity=1,reloadKey=0}){
  const [texture,setTexture]=useState(null)
  useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&v=${reloadKey}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,reloadKey])
- return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
+ return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[28,21]}/>{type==='ortho'?<meshStandardMaterial map={texture} roughness={1} metalness={0} polygonOffset polygonOffsetFactor={-height*100}/>:<meshBasicMaterial map={texture} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-height*100}/>}</mesh>:null
 }
 
 export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, parcel=null, solar={date:'03-21',hour:12,all:false} }) {
