@@ -7,35 +7,37 @@ import { IfcAPI } from 'web-ifc'
 const valueOf = value => value && typeof value === 'object' && 'value' in value ? value.value : value
 
 function SectionCaps({model, plane, sectionPlane}) {
-  const stencil = useMemo(() => {
-    if (!model || !plane) return null
-    const group = new THREE.Group()
-    group.position.copy(model.position); group.rotation.copy(model.rotation); group.scale.copy(model.scale)
-    model.children.forEach(source => {
-      if (!source.isMesh) return
-      ;[[THREE.BackSide,THREE.IncrementWrapStencil],[THREE.FrontSide,THREE.DecrementWrapStencil]].forEach(([side,operation]) => {
-        const material = new THREE.MeshBasicMaterial({
-          side, clippingPlanes:[plane], depthWrite:false, depthTest:false, colorWrite:false,
-          stencilWrite:true, stencilWriteMask:0xff, stencilFuncMask:0xff, stencilFunc:THREE.AlwaysStencil,
-          stencilFail:operation, stencilZFail:operation, stencilZPass:operation
+  const stencils = useMemo(() => {
+    if (!model || !plane) return []
+    return model.children.filter(source => source.isMesh).map((source,index) => {
+      const group=new THREE.Group()
+      group.position.copy(model.position);group.rotation.copy(model.rotation);group.scale.copy(model.scale)
+      ;[[THREE.BackSide,THREE.IncrementWrapStencil],[THREE.FrontSide,THREE.DecrementWrapStencil]].forEach(([side,operation],pass) => {
+        const material=new THREE.MeshBasicMaterial({
+          side,clippingPlanes:[plane],depthWrite:false,depthTest:false,colorWrite:false,
+          stencilWrite:true,stencilWriteMask:0xff,stencilFuncMask:0xff,stencilFunc:THREE.AlwaysStencil,
+          stencilFail:operation,stencilZFail:operation,stencilZPass:operation
         })
-        const mesh = new THREE.Mesh(source.geometry,material)
-        mesh.renderOrder=2; group.add(mesh)
+        const mesh=new THREE.Mesh(source.geometry,material)
+        mesh.renderOrder=10+index*3+pass;group.add(mesh)
       })
+      return group
     })
-    return group
   },[model,plane])
-  useEffect(()=>()=>stencil?.traverse(o=>o.material?.dispose()),[stencil])
-  if(!stencil)return null
-  const horizontal=sectionPlane.mode==='horizontal', xCut=sectionPlane.mode==='vertical-x'
+  useEffect(()=>()=>stencils.forEach(group=>group.traverse(o=>o.material?.dispose())),[stencils])
+  if(!stencils.length)return null
+  const horizontal=sectionPlane.mode==='horizontal',xCut=sectionPlane.mode==='vertical-x'
   const position=horizontal?[0,sectionPlane.position-.002,0]:xCut?[sectionPlane.position-.002,3.6,0]:[0,3.6,sectionPlane.position-.002]
   const rotation=horizontal?[-Math.PI/2,0,0]:xCut?[0,Math.PI/2,0]:[0,0,0]
-  return <><primitive object={stencil}/><mesh position={position} rotation={rotation} renderOrder={3}>
-    <planeGeometry args={[12,9]}/><meshBasicMaterial color="#f04444" side={THREE.DoubleSide} depthWrite={true} depthTest={true}
-      polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
-      stencilWrite stencilWriteMask={0xff} stencilFuncMask={0xff} stencilRef={0} stencilFunc={THREE.NotEqualStencil}
-      stencilFail={THREE.ReplaceStencil} stencilZFail={THREE.ReplaceStencil} stencilZPass={THREE.ReplaceStencil}/>
-  </mesh></>
+  return <>{stencils.map((stencil,index)=><React.Fragment key={index}>
+    <primitive object={stencil}/>
+    <mesh position={position} rotation={rotation} renderOrder={12+index*3}>
+      <planeGeometry args={[12,9]}/><meshBasicMaterial color="#f04444" side={THREE.DoubleSide} depthWrite depthTest
+        polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
+        stencilWrite stencilWriteMask={0xff} stencilFuncMask={0xff} stencilRef={0} stencilFunc={THREE.NotEqualStencil}
+        stencilFail={THREE.ReplaceStencil} stencilZFail={THREE.ReplaceStencil} stencilZPass={THREE.ReplaceStencil}/>
+    </mesh>
+  </React.Fragment>)}</>
 }
 
 export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane }) {
