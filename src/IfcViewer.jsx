@@ -131,12 +131,16 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
           }
         })
         const box=new THREE.Box3().setFromObject(root),center=box.getCenter(new THREE.Vector3()),sourceSize=box.getSize(new THREE.Vector3())
-        root.scale.setScalar(metersPerIfcUnit);root.position.set(-center.x*metersPerIfcUnit,-box.min.y*metersPerIfcUnit,-center.z*metersPerIfcUnit)
-        const size=sourceSize.multiplyScalar(metersPerIfcUnit),targetY=Math.max(.8,size.y*.38),span=Math.max(size.x,size.y,size.z)
-        root.userData.targetY=targetY;root.userData.metersPerIfcUnit=metersPerIfcUnit
+        const sourceSpan=Math.max(sourceSize.x,sourceSize.y,sourceSize.z)
+        // web-ifc may already normalize millimetre IFC geometry to metres. Avoid applying the IFC prefix twice.
+        const normalizedSpan=sourceSpan*metersPerIfcUnit
+        const geometryScale=normalizedSpan<1&&sourceSpan>=1?1:metersPerIfcUnit
+        root.scale.setScalar(geometryScale);root.position.set(-center.x*geometryScale,-box.min.y*geometryScale,-center.z*geometryScale)
+        const size=sourceSize.multiplyScalar(geometryScale),targetY=Math.max(.8,size.y*.38),span=Math.max(size.x,size.y,size.z)
+        root.userData.targetY=targetY;root.userData.metersPerIfcUnit=geometryScale
         const distance=Math.max(8,span*2.15)
         camera.up.set(0,1,0);camera.position.set(distance*.78,distance*.58,distance);camera.near=.02;camera.far=500;camera.lookAt(0,targetY,0);camera.updateProjectionMatrix()
-        if(!disposed){setModel(root);onState({status:'Model gotowy',error:null,meshes:root.children.length,size,metersPerIfcUnit,unit:metersPerIfcUnit===1?'m':metersPerIfcUnit===.01?'cm':metersPerIfcUnit===.001?'mm':`${metersPerIfcUnit} m`})}else root.traverse(o=>{o.geometry?.dispose();o.material?.dispose()})
+        if(!disposed){setModel(root);onState({status:'Model gotowy',error:null,meshes:root.children.length,size,metersPerIfcUnit:geometryScale,unit:geometryScale===1?'m':geometryScale===.01?'cm':geometryScale===.001?'mm':`${geometryScale} m`})}else root.traverse(o=>{o.geometry?.dispose();o.material?.dispose()})
       } catch(error){onState({status:'Błąd wczytywania',error:error.message})}
     }
     load()
