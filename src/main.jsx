@@ -138,16 +138,16 @@ const ENERGY_FIELDS={
  systems:[
   {id:'heatingSystem',label:'System ogrzewania',value:'Pompa ciepła powietrze/woda',source:'assumption'},
   {id:'energyCarrier',label:'Nośnik energii',value:'Energia elektryczna',source:'manual'},
-  {id:'heatingGeneration',label:'Sprawność wytwarzania ηH,g',value:'2.60',source:'assumption'},
-  {id:'heatingDistribution',label:'Sprawność dystrybucji ηH,d',value:'1.00',source:'assumption'},
-  {id:'heatingControl',label:'Sprawność regulacji ηH,e',value:'0.76',source:'assumption'},
-  {id:'ventilationType',label:'Typ wentylacji',value:'Wentylacja mechaniczna',source:'manual'},
+  {id:'heatingGeneration',label:'Sprawność wytwarzania ηH,g',value:'3.20',source:'assumption'},
+  {id:'heatingDistribution',label:'Sprawność dystrybucji ηH,d',value:'0.96',source:'assumption'},
+  {id:'heatingControl',label:'Sprawność regulacji ηH,e',value:'0.93',source:'assumption'},
+  {id:'ventilationType',label:'Typ wentylacji',value:'Wentylacja mechaniczna z odzyskiem',source:'manual'},
   {id:'airFlow',label:'Strumień powietrza',value:'',unit:'m³/h',source:'missing'},
   {id:'heatRecovery',label:'Odzysk ciepła ηOC',value:'80',unit:'%',source:'assumption'},
   {id:'dhwSystem',label:'System przygotowania c.w.u.',value:'Pompa ciepła',source:'assumption'},
   {id:'dhwEfficiency',label:'Sprawność c.w.u. ηW,tot',value:'2.60',source:'assumption'},
   {id:'coolingSystem',label:'Instalacja chłodzenia',value:'Brak',source:'manual'},
-  {id:'primaryFactor',label:'Współczynnik nakładu wi',value:'3.00',source:'assumption'}
+  {id:'primaryFactor',label:'Współczynnik nakładu wi',value:'2.50',source:'assumption'}
  ],
  results:[
   {id:'htr',label:'Straty przez przenikanie Htr',value:'',unit:'W/K',source:'result'},
