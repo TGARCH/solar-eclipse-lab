@@ -173,7 +173,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>} 
       {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>} 
       <mesh position={[0,.008,0]} rotation={[-Math.PI/2,0,0]} receiveShadow renderOrder={4}><planeGeometry args={[mapSize,mapSize]}/><shadowMaterial transparent opacity={.58} depthWrite={false}/></mesh>
-      <mesh position={[0,-.072,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
+      <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]}><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
     {model&&<primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/>}
