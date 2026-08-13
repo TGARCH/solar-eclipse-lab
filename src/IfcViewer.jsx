@@ -70,7 +70,7 @@ function ParcelShape({wkt,gps}){
 
 function GeoportalLayer({type,gps,height,mapSize,opacity=1,reloadKey=0}){
  const [texture,setTexture]=useState(null)
- useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&size=${mapSize}&v=${reloadKey}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,mapSize,reloadKey])
+ useEffect(()=>{let active=true,current;setTexture(previous=>{previous?.dispose();return null});const extent=[Number(gps.lat).toFixed(8),Number(gps.lon).toFixed(8),mapSize,reloadKey].join('-'),url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&size=${mapSize}&extent=${extent}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;t.userData.extent=extent;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,mapSize,reloadKey])
  return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[mapSize,mapSize]}/>{type==='ortho'?<meshStandardMaterial map={texture} color="#ffffff" roughness={1} metalness={0}/>:<meshBasicMaterial map={texture} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-height*100}/>}</mesh>:null
 }
 
