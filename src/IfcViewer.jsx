@@ -159,7 +159,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={-.003} opacity={.95} reloadKey={geoReload}/>} 
       {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} opacity={.9} reloadKey={geoReload}/>} 
       {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} opacity={.72} reloadKey={geoReload}/>} 
-      <mesh position={[0,-.022,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[28,24,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
+      <mesh position={[0,-.032,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[28,24,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <Line points={[[-10,.015,-7],[8,.015,-7],[11,.015,5],[3,.015,9],[-11,.015,6],[-10,.015,-7]]} color="#64d6b5" lineWidth={2}/>
       <Line points={[[-13,.025,-5],[13,.025,-5]]} color="#6f8590" lineWidth={7} transparent opacity={.55}/>
       <Line points={[[-8,.03,-7],[-8,.03,6]]} color="#7f9198" lineWidth={4} transparent opacity={.45}/>
