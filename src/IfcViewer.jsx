@@ -74,6 +74,14 @@ function GeoportalLayer({type,gps,height,mapSize,opacity=1,reloadKey=0}){
  return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[mapSize,mapSize]}/>{type==='ortho'?<meshStandardMaterial map={texture} color="#ffffff" roughness={1} metalness={0}/>:<meshBasicMaterial map={texture} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-height*100}/>}</mesh>:null
 }
 
+function GpsOriginSun({position,intensity,...props}){
+ const {scene}=useThree()
+ const [target]=useState(()=>{const object=new THREE.Object3D();object.name='GPS origin 0,0,0';return object})
+ const light=React.useRef(null)
+ useEffect(()=>{target.position.set(0,0,0);scene.add(target);if(light.current){light.current.target=target;light.current.target.updateMatrixWorld(true)}return()=>scene.remove(target)},[scene,target])
+ return <directionalLight ref={light} position={position} intensity={intensity} {...props}/>
+}
+
 export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false} }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
@@ -154,6 +162,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     const offset=solar.date==='03-21'?'+01:00':'+02:00'
     return hours.map(hour=>{const date=new Date(`2026-${solar.date}T${String(hour).padStart(2,'0')}:00:00${offset}`),p=SunCalc.getPosition(date,lat,lon),r=32*Math.cos(p.altitude);return {hour,altitude:p.altitude,azimuth:p.azimuth,position:[Math.sin(p.azimuth)*r,Math.max(1,32*Math.sin(p.altitude)),Math.cos(p.azimuth)*r]}}).filter(s=>s.altitude>0)
   },[gps.lat,gps.lon,solar])
+  const gpsFrameKey=`${Number(gps.lat).toFixed(8)}:${Number(gps.lon).toFixed(8)}:${mapSize}`
   const shadowExtent=Math.max(20,mapSize*.52),ruler=mapSize>=500?100:mapSize>=250?50:10
   const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:(model?.userData.targetY||1),0),[viewMode,model])
   const planeVisual=sectionPlane?.mode!=='off'&&(()=>{
@@ -165,9 +174,9 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
   return <>
     <hemisphereLight intensity={viewMode==='site'?.32:.82} color="#dcecff" groundColor="#15202a"/>
     {viewMode!=='site'&&<directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>}
-    {viewMode==='site'&&sunData.map(s=><directionalLight key={s.hour} position={s.position} intensity={solar.all?.12:3.1} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent} shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent} shadow-bias={-.0002}/>)}
+    {viewMode==='site'&&sunData.map(s=><GpsOriginSun key={`${gpsFrameKey}:${s.hour}`} position={s.position} intensity={solar.all?.12:3.1} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent} shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent} shadow-bias={-.0002}/>)}
     {viewMode!=='site'&&<gridHelper args={[80,80,'#bcc9ce','#e1e7e9']} position={[0,-.012,0]}/>}
-    {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
+    {viewMode==='site'&&<group key={gpsFrameKey} name="GPS local frame — origin 0,0,0" position={[0,0,0]} rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
       {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.006} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
       {geoLayers.gesut&&<GeoportalLayer type="gesut" gps={gps} height={.012} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
@@ -175,7 +184,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]}><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
-    {model&&<primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/>}
+    {model&&<group name="IFC fixed origin 0,0,0" position={[0,0,0]}><primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/></group>}
     {planeVisual}
     {model&&clippingPlane&&<SectionCaps model={model} plane={clippingPlane} sectionPlane={sectionPlane}/>}
     <OrbitControls makeDefault target={target} enableDamping dampingFactor={.08} minDistance={1.2} maxDistance={viewMode==='site'?mapSize*2:80} zoomToCursor/>
