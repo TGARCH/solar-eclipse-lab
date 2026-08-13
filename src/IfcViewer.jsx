@@ -60,7 +60,13 @@ function SectionCaps({model, plane, sectionPlane}) {
   return caps?<primitive object={caps}/>:null
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0 }) {
+function GeoportalLayer({type,gps,height,opacity=1}){
+ const [texture,setTexture]=useState(null)
+ useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon])
+ return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1}><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
+}
+
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={} }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -141,6 +147,10 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     <directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>
     <gridHelper args={[80,80,'#5c7687','#273746']} position={[0,-.012,0]}/>
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
+      {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.03}/>} 
+      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.005} opacity={.9}/>} 
+      {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={.012} opacity={.9}/>} 
+      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.019} opacity={.72}/>} 
       <mesh position={[0,-.035,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[28,24]}/><meshStandardMaterial color="#111c22" roughness={1}/></mesh>
       <Line points={[[-10,.015,-7],[8,.015,-7],[11,.015,5],[3,.015,9],[-11,.015,6],[-10,.015,-7]]} color="#64d6b5" lineWidth={2}/>
       <Line points={[[-13,.025,-5],[13,.025,-5]]} color="#6f8590" lineWidth={7} transparent opacity={.55}/>
