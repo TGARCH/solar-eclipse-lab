@@ -166,7 +166,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     <hemisphereLight intensity={viewMode==='site'?.32:.82} color="#dcecff" groundColor="#15202a"/>
     {viewMode!=='site'&&<directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>}
     {viewMode==='site'&&sunData.map(s=><directionalLight key={s.hour} position={s.position} intensity={solar.all?.12:3.1} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent} shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent} shadow-bias={-.0002}/>)}
-    <gridHelper args={[viewMode==='site'?mapSize:80,viewMode==='site'?Math.min(mapSize,500):80,'#bcc9ce','#e1e7e9']} position={[0,-.012,0]}/>
+    {viewMode!=='site'&&<gridHelper args={[80,80,'#bcc9ce','#e1e7e9']} position={[0,-.012,0]}/>}
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
       {geoLayers.egib&&parcel?.geometry&&<ParcelShape wkt={parcel.geometry} gps={gps}/>}  
