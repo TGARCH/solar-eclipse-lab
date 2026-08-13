@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { OrbitControls } from '@react-three/drei'
+import { Line, OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { IfcAPI } from 'web-ifc'
@@ -60,7 +60,7 @@ function SectionCaps({model, plane, sectionPlane}) {
   return caps?<primitive object={caps}/>:null
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane }) {
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0 }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -128,7 +128,8 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane 
     })
   },[model,selectedId,clippingPlane])
 
-  const target=useMemo(()=>new THREE.Vector3(0,1.6,0),[])
+  useEffect(()=>{if(viewMode==='site'){camera.position.set(13,15,16);camera.lookAt(0,0,0)}else{camera.position.set(11.5,8.5,14.5);camera.lookAt(0,1.6,0)}camera.updateProjectionMatrix()},[viewMode,camera])
+  const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:1.6,0),[viewMode])
   const planeVisual=sectionPlane?.mode!=='off'&&(()=>{
     const horizontal=sectionPlane.mode==='horizontal', xCut=sectionPlane.mode==='vertical-x'
     const position=horizontal?[0,sectionPlane.position,0]:xCut?[sectionPlane.position,3.6,0]:[0,3.6,sectionPlane.position]
@@ -139,6 +140,16 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane 
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
     <directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>
     <gridHelper args={[80,80,'#5c7687','#273746']} position={[0,-.012,0]}/>
+    {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
+      <mesh position={[0,-.035,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[28,24]}/><meshStandardMaterial color="#111c22" roughness={1}/></mesh>
+      <Line points={[[-10,.015,-7],[8,.015,-7],[11,.015,5],[3,.015,9],[-11,.015,6],[-10,.015,-7]]} color="#64d6b5" lineWidth={2}/>
+      <Line points={[[-13,.025,-5],[13,.025,-5]]} color="#6f8590" lineWidth={7} transparent opacity={.55}/>
+      <Line points={[[-8,.03,-7],[-8,.03,6]]} color="#7f9198" lineWidth={4} transparent opacity={.45}/>
+      <mesh position={[5,.01,3]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[5,3]}/><meshBasicMaterial color="#273d43" transparent opacity={.7}/></mesh>
+      <mesh position={[-5,.01,2]} rotation={[-Math.PI/2,0,0]}><circleGeometry args={[2.2,32]}/><meshBasicMaterial color="#18362d" transparent opacity={.75}/></mesh>
+      <group position={[0,.08,0]}><axesHelper args={[2.4]}/><mesh rotation={[0,0,0]} position={[0,.35,0]}><sphereGeometry args={[.12,18,18]}/><meshBasicMaterial color="#ffffff"/></mesh></group>
+      <group position={[9,.1,7]}><mesh position={[0,.8,0]}><coneGeometry args={[.22,.7,3]}/><meshBasicMaterial color="#e5eef0"/></mesh><Line points={[[0,0,0],[0,.65,0]]} color="#e5eef0" lineWidth={2}/></group>
+    </group>}
     {model&&<primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/>}
     {planeVisual}
     {model&&clippingPlane&&<SectionCaps model={model} plane={clippingPlane} sectionPlane={sectionPlane}/>}
