@@ -61,13 +61,13 @@ function SectionCaps({model, plane, sectionPlane}) {
   return caps?<primitive object={caps}/>:null
 }
 
-function GeoportalLayer({type,gps,height,opacity=1}){
+function GeoportalLayer({type,gps,height,opacity=1,reloadKey=0}){
  const [texture,setTexture]=useState(null)
- useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon])
+ useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&v=${reloadKey}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,reloadKey])
  return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, solar={date:'03-21',hour:12,all:false} }) {
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, solar={date:'03-21',hour:12,all:false} }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -153,13 +153,13 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
     {viewMode!=='site'&&<directionalLight position={[12,18,10]} intensity={2.4} castShadow shadow-mapSize={[2048,2048]} shadow-bias={-.00015}/>}
     {viewMode==='site'&&sunData.map(s=><directionalLight key={s.hour} position={s.position} intensity={solar.all?.32:2.8} castShadow shadow-mapSize={solar.all?[768,768]:[2048,2048]} shadow-camera-left={-18} shadow-camera-right={18} shadow-camera-top={18} shadow-camera-bottom={-18} shadow-bias={-.0002}/>)}
-    <gridHelper args={[80,80,'#5c7687','#273746']} position={[0,-.012,0]}/>
+    <gridHelper args={[80,80,viewMode==='site'?'#9bb0b8':'#5c7687',viewMode==='site'?'#d5dee2':'#273746']} position={[0,-.012,0]}/>
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
-      {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.03}/>} 
-      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.005} opacity={.9}/>} 
-      {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={.012} opacity={.9}/>} 
-      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.019} opacity={.72}/>} 
-      <mesh position={[0,-.035,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[28,24]}/><meshStandardMaterial color="#111c22" roughness={1}/></mesh>
+      {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} reloadKey={geoReload}/>} 
+      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={-.003} opacity={.95} reloadKey={geoReload}/>} 
+      {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} opacity={.9} reloadKey={geoReload}/>} 
+      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} opacity={.72} reloadKey={geoReload}/>} 
+      <mesh position={[0,-.022,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[28,24,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <Line points={[[-10,.015,-7],[8,.015,-7],[11,.015,5],[3,.015,9],[-11,.015,6],[-10,.015,-7]]} color="#64d6b5" lineWidth={2}/>
       <Line points={[[-13,.025,-5],[13,.025,-5]]} color="#6f8590" lineWidth={7} transparent opacity={.55}/>
       <Line points={[[-8,.03,-7],[-8,.03,6]]} color="#7f9198" lineWidth={4} transparent opacity={.45}/>
