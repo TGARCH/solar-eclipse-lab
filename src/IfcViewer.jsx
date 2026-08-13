@@ -82,8 +82,8 @@ function GpsOriginSun({position,intensity,...props}){
  return <directionalLight ref={light} position={position} intensity={intensity} {...props}/>
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false} }) {
-  const { camera } = useThree()
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false}, topViewSignal=0 }) {
+  const { camera, controls } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
     if (!sectionPlane || sectionPlane.mode === 'off') return null
@@ -160,6 +160,12 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
   },[model,selectedId,clippingPlane])
 
   useEffect(()=>{if(viewMode==='site'){const d=Math.max(70,mapSize*.72);camera.position.set(d*.72,d,d);camera.near=.05;camera.far=Math.max(2000,mapSize*8);camera.lookAt(0,0,0)}else if(model){const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),distance=Math.max(8,Math.max(size.x,size.y,size.z)*2.15),targetY=model.userData.targetY||1;camera.position.set(distance*.78,distance*.58,distance);camera.lookAt(0,targetY,0)}camera.updateProjectionMatrix()},[viewMode,camera,model,mapSize])
+  useEffect(()=>{
+    if(viewMode!=='site'||!topViewSignal)return
+    const height=Math.max(80,mapSize*.82)
+    camera.up.set(0,0,-1);camera.position.set(0,height,0);camera.near=.05;camera.far=Math.max(2000,mapSize*8);camera.lookAt(0,0,0);camera.updateProjectionMatrix()
+    if(controls){controls.target.set(0,0,0);controls.update()}
+  },[topViewSignal,viewMode,camera,controls,mapSize])
   const sunData=useMemo(()=>{
     const lat=Number(gps.lat)||52.25,lon=Number(gps.lon)||21
     const hours=solar.all?Array.from({length:11},(_,i)=>i+7):[solar.hour]
@@ -185,7 +191,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={.006} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
       {geoLayers.gesut&&<GeoportalLayer type="gesut" gps={gps} height={.012} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>}
       {geoLayers.bdot&&<GeoportalLayer type="bdot" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
-      <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]}><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
+      <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={1} metalness={0}/></mesh>
       <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
     {model&&<group name="IFC fixed origin 0,0,0" position={[0,0,0]}><primitive object={model} onPointerDown={event=>{event.stopPropagation();const info=event.object.userData.info;if(info)onSelect(info)}}/></group>}
