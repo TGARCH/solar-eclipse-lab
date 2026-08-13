@@ -7,37 +7,57 @@ import { IfcAPI } from 'web-ifc'
 const valueOf = value => value && typeof value === 'object' && 'value' in value ? value.value : value
 
 function SectionCaps({model, plane, sectionPlane}) {
-  const stencils = useMemo(() => {
-    if (!model || !plane) return []
-    return model.children.filter(source => source.isMesh).map((source,index) => {
-      const group=new THREE.Group()
-      group.position.copy(model.position);group.rotation.copy(model.rotation);group.scale.copy(model.scale)
-      ;[[THREE.BackSide,THREE.IncrementWrapStencil],[THREE.FrontSide,THREE.DecrementWrapStencil]].forEach(([side,operation],pass) => {
-        const material=new THREE.MeshBasicMaterial({
-          side,clippingPlanes:[plane],depthWrite:false,depthTest:false,colorWrite:false,
-          stencilWrite:true,stencilWriteMask:0xff,stencilFuncMask:0xff,stencilFunc:THREE.AlwaysStencil,
-          stencilFail:operation,stencilZFail:operation,stencilZPass:operation
-        })
-        const mesh=new THREE.Mesh(source.geometry,material)
-        mesh.renderOrder=10+index*3+pass;group.add(mesh)
+  const caps=useMemo(()=>{
+    if(!model||!plane)return null
+    model.updateMatrixWorld(true)
+    const root=new THREE.Group(),epsilon=1e-4
+    const key=p=>`${Math.round(p.x/epsilon)},${Math.round(p.y/epsilon)},${Math.round(p.z/epsilon)}`
+    model.children.forEach(source=>{
+      if(!source.isMesh)return
+      const position=source.geometry.getAttribute('position'),index=source.geometry.index
+      const segments=[]
+      const vertex=i=>new THREE.Vector3().fromBufferAttribute(position,i).applyMatrix4(source.matrixWorld)
+      const edge=(a,b,points)=>{
+        const da=plane.distanceToPoint(a),db=plane.distanceToPoint(b)
+        if(Math.abs(da)<epsilon)points.push(a.clone())
+        if(da*db<0)points.push(a.clone().lerp(b,da/(da-db)))
+      }
+      const count=index?index.count:position.count
+      for(let i=0;i<count;i+=3){
+        const a=vertex(index?index.getX(i):i),b=vertex(index?index.getX(i+1):i+1),d=vertex(index?index.getX(i+2):i+2),points=[]
+        edge(a,b,points);edge(b,d,points);edge(d,a,points)
+        const unique=[...new Map(points.map(p=>[key(p),p])).values()]
+        if(unique.length===2)segments.push(unique)
+      }
+      const unused=segments.slice(),loops=[]
+      while(unused.length){
+        const first=unused.pop(),loop=[first[0],first[1]]
+        let guard=0
+        while(key(loop[loop.length-1])!==key(loop[0])&&unused.length&&guard++<10000){
+          const last=key(loop[loop.length-1])
+          const nextIndex=unused.findIndex(s=>key(s[0])===last||key(s[1])===last)
+          if(nextIndex<0)break
+          const next=unused.splice(nextIndex,1)[0]
+          loop.push(key(next[0])===last?next[1]:next[0])
+        }
+        if(loop.length>3&&key(loop[loop.length-1])===key(loop[0]))loops.push(loop.slice(0,-1))
+      }
+      loops.forEach(loop=>{
+        const points2=loop.map(p=>sectionPlane.mode==='horizontal'?new THREE.Vector2(p.x,p.z):sectionPlane.mode==='vertical-x'?new THREE.Vector2(p.z,p.y):new THREE.Vector2(p.x,p.y))
+        const triangles=THREE.ShapeUtils.triangulateShape(points2,[])
+        if(!triangles.length)return
+        const positions=[]
+        triangles.forEach(t=>t.forEach(i=>positions.push(loop[i].x,loop[i].y,loop[i].z)))
+        const geometry=new THREE.BufferGeometry()
+        geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals()
+        const material=new THREE.MeshBasicMaterial({color:'#f04444',side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2})
+        const mesh=new THREE.Mesh(geometry,material);mesh.renderOrder=5;root.add(mesh)
       })
-      return group
     })
-  },[model,plane])
-  useEffect(()=>()=>stencils.forEach(group=>group.traverse(o=>o.material?.dispose())),[stencils])
-  if(!stencils.length)return null
-  const horizontal=sectionPlane.mode==='horizontal',xCut=sectionPlane.mode==='vertical-x'
-  const position=horizontal?[0,sectionPlane.position-.002,0]:xCut?[sectionPlane.position-.002,3.6,0]:[0,3.6,sectionPlane.position-.002]
-  const rotation=horizontal?[-Math.PI/2,0,0]:xCut?[0,Math.PI/2,0]:[0,0,0]
-  return <>{stencils.map((stencil,index)=><React.Fragment key={index}>
-    <primitive object={stencil}/>
-    <mesh position={position} rotation={rotation} renderOrder={12+index*3}>
-      <planeGeometry args={[12,9]}/><meshBasicMaterial color="#f04444" side={THREE.DoubleSide} depthWrite depthTest
-        polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
-        stencilWrite stencilWriteMask={0xff} stencilFuncMask={0xff} stencilRef={0} stencilFunc={THREE.NotEqualStencil}
-        stencilFail={THREE.ReplaceStencil} stencilZFail={THREE.ReplaceStencil} stencilZPass={THREE.ReplaceStencil}/>
-    </mesh>
-  </React.Fragment>)}</>
+    return root
+  },[model,plane,sectionPlane.mode])
+  useEffect(()=>()=>caps?.traverse(o=>{o.geometry?.dispose();o.material?.dispose()}),[caps])
+  return caps?<primitive object={caps}/>:null
 }
 
 export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane }) {
