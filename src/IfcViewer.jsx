@@ -61,13 +61,20 @@ function SectionCaps({model, plane, sectionPlane}) {
   return caps?<primitive object={caps}/>:null
 }
 
+function ParcelShape({wkt,gps}){
+ const points=useMemo(()=>{const match=wkt?.match(/POLYGON\(\((.+)\)\)/);if(!match)return [];const lat0=Number(gps.lat),lon0=Number(gps.lon),cos=Math.cos(lat0*Math.PI/180);return match[1].split(',').map(pair=>{const [lon,lat]=pair.trim().split(/\s+/).map(Number);return [(lon-lon0)*111320*cos,.018,-(lat-lat0)*110540]})},[wkt,gps.lat,gps.lon])
+ if(points.length<4)return null
+ const shape=new THREE.Shape(points.slice(0,-1).map(p=>new THREE.Vector2(p[0],p[2])))
+ return <group><Line points={points} color="#e33f4f" lineWidth={3}/><mesh position={[0,.009,0]} rotation={[-Math.PI/2,0,0]}><shapeGeometry args={[shape]}/><meshBasicMaterial color="#ef5966" transparent opacity={.12} side={THREE.DoubleSide} depthWrite={false}/></mesh></group>
+}
+
 function GeoportalLayer({type,gps,height,opacity=1,reloadKey=0}){
  const [texture,setTexture]=useState(null)
  useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&v=${reloadKey}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,reloadKey])
  return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[28,21]}/><meshBasicMaterial map={texture} transparent={opacity<1||type!=='ortho'} opacity={opacity} depthWrite={type==='ortho'} polygonOffset polygonOffsetFactor={-height*100}/></mesh>:null
 }
 
-export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, solar={date:'03-21',hour:12,all:false} }) {
+export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, parcel=null, solar={date:'03-21',hour:12,all:false} }) {
   const { camera } = useThree()
   const [model, setModel] = useState(null)
   const clippingPlane = useMemo(() => {
@@ -156,7 +163,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     <gridHelper args={[80,80,viewMode==='site'?'#9bb0b8':'#5c7687',viewMode==='site'?'#d5dee2':'#273746']} position={[0,-.012,0]}/>
     {viewMode==='site'&&<group rotation={[0,THREE.MathUtils.degToRad(siteRotation),0]}>
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} reloadKey={geoReload}/>} 
-      {geoLayers.egib&&<GeoportalLayer type="egib" gps={gps} height={-.003} opacity={.95} reloadKey={geoReload}/>} 
+      {geoLayers.egib&&parcel?.geometry&&<ParcelShape wkt={parcel.geometry} gps={gps}/>}  
       {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} opacity={.9} reloadKey={geoReload}/>} 
       {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} opacity={.72} reloadKey={geoReload}/>} 
       <mesh position={[0,-.032,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><boxGeometry args={[28,24,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
