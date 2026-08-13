@@ -57,6 +57,25 @@ const TABS = [
       ['Źródło ciepła','Pompa ciepła — założenie','assumption','Źródło_ciepła','{{Instalacje}}'],
       ['Wentylacja','Rekuperacja 80% — założenie','assumption','Wentylacja','{{Instalacje}}'],
       ['EP — wynik roboczy','174,5 kWh/(m²·rok)','derived','EP','{{Charakterystyka_energetyczna}}']]}]},
+  {id:'energy',label:'Energia',title:'Charakterystyka energetyczna',groups:[
+    {name:'Wyniki obliczeń — wariant roboczy',fields:[
+      ['EP — energia pierwotna','174,5 kWh/(m²·rok)','derived','EP','{{EP}}'],
+      ['EK — energia końcowa','69,8 kWh/(m²·rok)','derived','EK','{{EK}}'],
+      ['EU — ogrzewanie','158,6 kWh/(m²·rok)','derived','EU_ogrzewanie','{{EU_ogrzewanie}}'],
+      ['Projektowa moc cieplna','1,07 kW','derived','Moc_cieplna','{{Moc_cieplna}}']]},
+    {name:'Przegrody termiczne',fields:[
+      ['Ściana zewnętrzna U','0,18 W/(m²K)','assumption','U_ściana','{{U_ściana}}'],
+      ['Dach U','0,15 W/(m²K)','assumption','U_dach','{{U_dach}}'],
+      ['Podłoga U','0,25 W/(m²K)','assumption','U_podłoga','{{U_podłoga}}'],
+      ['Okno Uw','0,90 W/(m²K)','assumption','Uw_okno','{{Uw_okno}}'],
+      ['Drzwi Ud','1,30 W/(m²K)','assumption','Ud_drzwi','{{Ud_drzwi}}']]},
+    {name:'Dane modelu i instalacje',fields:[
+      ['Powierzchnia ogrzewana','13,03 m²','ifc','Af','{{Pow_ogrzewana}}'],
+      ['Kubatura ogrzewana','50,61 m³','ifc','Ve','{{Kubatura_ogrzewana}}'],
+      ['Temperatura wewnętrzna','21°C','ifc','Theta_int','{{Temp_wewnętrzna}}'],
+      ['Źródło ogrzewania','Pompa ciepła — założenie','assumption','System_ogrzewania','{{Źródło_ciepła}}'],
+      ['Sprawność odzysku ciepła','80% — założenie','assumption','Rekuperacja','{{Rekuperacja}}'],
+      ['Mostki cieplne','Dodatek 5% — założenie','assumption','Mostki_cieplne','{{Mostki_cieplne}}']]}]},
   {id:'bioz',label:'BIOZ',title:'Informacja BIOZ',groups:[
     {name:'Zakres informacji',fields:[
       ['Kolejność robót','Do uzupełnienia','missing','BIOZ_kolejność','{{Kolejność_robót}}'],
