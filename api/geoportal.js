@@ -7,7 +7,7 @@ const SERVICES={
 const preferred={ortho:['Raster'],egib:['dzialki','numery_dzialek','budynki','kontury','uzytki'],utilities:[],mpzp:[]}
 async function layerNames(service,type){
  const response=await fetch(service+'?SERVICE=WMS&REQUEST=GetCapabilities')
- const xml=await response.text(),names=[...xml.matchAll(/<Name>([^<]+)<\/Name>/g)].map(m=>m[1]).filter(n=>!/^WMS$/i.test(n))
+ const xml=await response.text(),names=[...xml.matchAll(/<(?:\\w+:)?Name>([^<]+)<\\/(?:\\w+:)?Name>/g)].map(m=>m[1]).filter(n=>!/^WMS$/i.test(n))
  if(preferred[type].length)return preferred[type].filter(n=>names.includes(n)).length?preferred[type].filter(n=>names.includes(n)):names.slice(1,8)
  return names.slice(1,8)
 }
