@@ -71,7 +71,7 @@ function ParcelShape({wkt,gps}){
 function GeoportalLayer({type,gps,height,mapSize,opacity=1,reloadKey=0}){
  const [texture,setTexture]=useState(null)
  useEffect(()=>{let active=true,current;const url=`/api/geoportal?type=${type}&lat=${encodeURIComponent(gps.lat)}&lon=${encodeURIComponent(gps.lon)}&size=${mapSize}&v=${reloadKey}`;new THREE.TextureLoader().load(url,t=>{if(!active){t.dispose();return}t.colorSpace=THREE.SRGBColorSpace;current=t;setTexture(t)},undefined,()=>active&&setTexture(null));return()=>{active=false;current?.dispose()}},[type,gps.lat,gps.lon,mapSize,reloadKey])
- return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[mapSize,mapSize]}/>{type==='ortho'?<meshBasicMaterial map={texture} polygonOffset polygonOffsetFactor={-height*100}/>:<meshBasicMaterial map={texture} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-height*100}/>}</mesh>:null
+ return texture?<mesh position={[0,height,0]} rotation={[-Math.PI/2,0,0]} renderOrder={type==='ortho'?0:1} receiveShadow><planeGeometry args={[mapSize,mapSize]}/>{type==='ortho'?<meshStandardMaterial map={texture} color="#ffffff" roughness={1} metalness={0}/>:<meshBasicMaterial map={texture} transparent opacity={opacity} depthWrite={false} polygonOffset polygonOffsetFactor={-height*100}/>}</mesh>:null
 }
 
 export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane, viewMode='model', siteRotation=0, gps={lat:'52.25',lon:'21'}, geoLayers={}, geoReload=0, mapSize=250, parcel=null, solar={date:'03-21',hour:12,all:false} }) {
@@ -171,8 +171,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
       {geoLayers.ortho&&<GeoportalLayer type="ortho" gps={gps} height={-.006} mapSize={mapSize} reloadKey={geoReload}/>} 
       {geoLayers.egib&&parcel?.geometry&&<ParcelShape wkt={parcel.geometry} gps={gps}/>}  
       {geoLayers.utilities&&<GeoportalLayer type="utilities" gps={gps} height={0} mapSize={mapSize} opacity={.9} reloadKey={geoReload}/>} 
-      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>} 
-      <mesh position={[0,.008,0]} rotation={[-Math.PI/2,0,0]} receiveShadow renderOrder={4}><planeGeometry args={[mapSize,mapSize]}/><shadowMaterial transparent opacity={.58} depthWrite={false}/></mesh>
+      {geoLayers.mpzp&&<GeoportalLayer type="mpzp" gps={gps} height={.003} mapSize={mapSize} opacity={.72} reloadKey={geoReload}/>}
       <mesh position={[0,-.16,0]} rotation={[-Math.PI/2,0,0]}><boxGeometry args={[mapSize,mapSize,.02]}/><meshStandardMaterial color="#ffffff" roughness={.96}/></mesh>
       <group position={[-mapSize*.46,.025,mapSize*.46]}><Line points={[[0,0,0],[ruler,0,0]]} color="#25343a" lineWidth={3}/>{[0,ruler/2,ruler].map(x=><Line key={x} points={[[x,0,-ruler*.025],[x,0,ruler*.025]]} color="#25343a" lineWidth={2}/>)}</group>
     </group>}
