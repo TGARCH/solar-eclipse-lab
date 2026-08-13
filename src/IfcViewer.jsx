@@ -16,7 +16,7 @@ function SectionCaps({model, plane, sectionPlane}) {
       ;[[THREE.BackSide,THREE.IncrementWrapStencil],[THREE.FrontSide,THREE.DecrementWrapStencil]].forEach(([side,operation]) => {
         const material = new THREE.MeshBasicMaterial({
           side, clippingPlanes:[plane], depthWrite:false, depthTest:false, colorWrite:false,
-          stencilWrite:true, stencilFunc:THREE.AlwaysStencil,
+          stencilWrite:true, stencilWriteMask:0xff, stencilFuncMask:0xff, stencilFunc:THREE.AlwaysStencil,
           stencilFail:operation, stencilZFail:operation, stencilZPass:operation
         })
         const mesh = new THREE.Mesh(source.geometry,material)
@@ -31,8 +31,9 @@ function SectionCaps({model, plane, sectionPlane}) {
   const position=horizontal?[0,sectionPlane.position-.002,0]:xCut?[sectionPlane.position-.002,3.6,0]:[0,3.6,sectionPlane.position-.002]
   const rotation=horizontal?[-Math.PI/2,0,0]:xCut?[0,Math.PI/2,0]:[0,0,0]
   return <><primitive object={stencil}/><mesh position={position} rotation={rotation} renderOrder={3}>
-    <planeGeometry args={[12,9]}/><meshBasicMaterial color="#e54848" side={THREE.DoubleSide} depthWrite={false}
-      stencilWrite stencilRef={0} stencilFunc={THREE.NotEqualStencil}
+    <planeGeometry args={[12,9]}/><meshBasicMaterial color="#f04444" side={THREE.DoubleSide} depthWrite={true} depthTest={true}
+      polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
+      stencilWrite stencilWriteMask={0xff} stencilFuncMask={0xff} stencilRef={0} stencilFunc={THREE.NotEqualStencil}
       stencilFail={THREE.ReplaceStencil} stencilZFail={THREE.ReplaceStencil} stencilZPass={THREE.ReplaceStencil}/>
   </mesh></>
 }
@@ -110,7 +111,7 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane 
     const horizontal=sectionPlane.mode==='horizontal', xCut=sectionPlane.mode==='vertical-x'
     const position=horizontal?[0,sectionPlane.position,0]:xCut?[sectionPlane.position,3.6,0]:[0,3.6,sectionPlane.position]
     const rotation=horizontal?[-Math.PI/2,0,0]:xCut?[0,Math.PI/2,0]:[0,0,0]
-    return <mesh position={position} rotation={rotation} renderOrder={4}><planeGeometry args={[11,8]}/><meshBasicMaterial color="#55d8b5" transparent opacity={.055} wireframe side={THREE.DoubleSide} depthWrite={false}/></mesh>
+    return <mesh position={position} rotation={rotation} renderOrder={4}><planeGeometry args={[11,8]}/><meshBasicMaterial color="#88a9b5" transparent opacity={.025} side={THREE.DoubleSide} depthWrite={false} depthTest={false}/></mesh>
   })()
   return <>
     <hemisphereLight intensity={1.05} color="#dcecff" groundColor="#15202a"/>
