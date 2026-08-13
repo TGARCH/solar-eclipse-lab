@@ -21,7 +21,7 @@ const TABS = [
       ['Faza projektu','PROJEKT BUDOWLANY','ifc','BLOCK_Strona_tytyłowa','{{BLOCK_Strona_tytyłowa}}'],
       ['Data opracowania','01.09.2021','ifc','Data_PB','{{Data_PB}}']]},
     {name:'Lokalizacja i strony',fields:[
-      ['Adres inwestycji','Warszawa, Polska','ifc','Adres_inwestycji','{{1_3_Lokalizacja}}'],
+      ['Adres inwestycji','Mikołów, Fabryczna 11','ifc','Adres_inwestycji','{{1_3_Lokalizacja}}'],
       ['Działka','Do uzupełnienia','missing','Nr_działki','{{Nr_działki}}'],
       ['Inwestor','Do uzupełnienia','missing','Inwestor','{{Inwestor}}'],
       ['Projektant architektury','Do uzupełnienia','missing','Architekt','{{Architekt}}']]}]},
@@ -29,7 +29,7 @@ const TABS = [
     {name:'Teren i stan istniejący',fields:[
       ['Opis stanu istniejącego','Do uzupełnienia','missing','PZT_stan_istniejący','{{PZT_stan_istniejący}}'],
       ['Powierzchnia działki','Do uzupełnienia','missing','Pow_działki','{{PZT_powierzchnie}}'],
-      ['Lokalizacja modelu','52°15′N, 21°00′E','ifc','1_3_Lokalizacja','{{1_3_Lokalizacja}}']]},
+      ['Lokalizacja modelu','50.1711725°N, 18.8873064°E','ifc','1_3_Lokalizacja','{{1_3_Lokalizacja}}']]},
     {name:'Bilans i infrastruktura',fields:[
       ['Powierzchnia zabudowy','Do wyliczenia z pełnego modelu','derived','Pow_zabudowy','{{PZT_powierzchnie}}'],
       ['Powierzchnia utwardzona','Do uzupełnienia','missing','Pow_utwardzona','{{PZT_powierzchnie}}'],
@@ -107,7 +107,7 @@ function ProjectStructure(){
 
 function Field({f}){return <div className="mapping-field"><div><span>{f[0]}</span><b className={f[2]}>{f[1]}</b></div><i className={f[2]}>{labels[f[2]]}</i><small>BAZA → {f[3]}</small><code>{f[4]}</code></div>}
 function App(){
- const [selectedIfc,setSelectedIfc]=useState(null),[ifcState,setIfcState]=useState({status:'Oczekiwanie na model',error:null,meshes:0}),[tab,setTab]=useState('main'),[sectionPlane,setSectionPlane]=useState({mode:'off',position:3.2}),[viewMode,setViewMode]=useState('model'),[siteRotation,setSiteRotation]=useState(0),[gps,setGps]=useState({lat:'52.250000',lon:'21.000000'}),[geoLayers,setGeoLayers]=useState({ortho:true,egib:true,gesut:false,bdot:false}),[parcel,setParcel]=useState(null),[geoLoading,setGeoLoading]=useState(false),[geoReload,setGeoReload]=useState(0),[mapSize,setMapSize]=useState(250),[solar,setSolar]=useState({date:'03-21',hour:12,all:false})
+ const [selectedIfc,setSelectedIfc]=useState(null),[ifcState,setIfcState]=useState({status:'Oczekiwanie na model',error:null,meshes:0}),[tab,setTab]=useState('main'),[sectionPlane,setSectionPlane]=useState({mode:'off',position:3.2}),[viewMode,setViewMode]=useState('model'),[siteRotation,setSiteRotation]=useState(0),[gps,setGps]=useState({lat:'50.1711725338',lon:'18.8873064393'}),[geoLayers,setGeoLayers]=useState({ortho:true,egib:true,gesut:false,bdot:false}),[parcel,setParcel]=useState(null),[geoLoading,setGeoLoading]=useState(false),[geoReload,setGeoReload]=useState(0),[mapSize,setMapSize]=useState(250),[solar,setSolar]=useState({date:'03-21',hour:12,all:false})
  const handleIfcState=useCallback(u=>setIfcState(p=>({...p,...u})),[])
  const sunPosition=useMemo(()=>{const offset=solar.date==='03-21'?'+01:00':'+02:00',date=new Date(`2026-${solar.date}T${String(solar.hour).padStart(2,'0')}:00:00${offset}`);return SunCalc.getPosition(date,Number(gps.lat)||52.25,Number(gps.lon)||21)},[solar.date,solar.hour,gps.lat,gps.lon])
  const current=TABS.find(t=>t.id===tab)
