@@ -98,3 +98,19 @@
 .solar-analysis{display:grid;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid #29434b}.solar-analysis>span{font-size:8px;letter-spacing:.14em;color:#d4ad69}.date-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px}.date-switch button,.all-shadows{border:1px solid #3c4950;background:#10191e;color:#879ba0;border-radius:7px;padding:7px;font-size:8px}.date-switch button.on,.all-shadows.on{border-color:#e1af5d;background:#382b18;color:#f2c87f}
 .solar-analysis>label{display:grid!important;grid-template-columns:1fr auto;gap:5px;align-items:center;margin:0!important}.solar-analysis>label b{float:none!important;font-size:8px;color:#8ba2a7;font-weight:500}.solar-analysis>label input{grid-column:1;margin:0!important;accent-color:#efb75d}.solar-analysis>label output{grid-column:2;grid-row:1/3;color:#f0bd68;font-size:11px;font-weight:700}
 .sun-metrics{display:grid;grid-template-columns:1fr 1fr 1.25fr;gap:4px}.sun-metrics div{padding:6px;border:1px solid #2b4249;border-radius:7px;background:#0c171c}.sun-metrics span{display:block;font-size:7px;color:#71888d}.sun-metrics b{display:block;margin-top:3px;font-size:9px;color:#dce7e6}.all-shadows{width:100%}
+
+/* Light architectural workspace */
+:root,html,body,#root{color:#18252b;background:#eef2f3}
+main,.bim-mode,.data-hub{background:radial-gradient(circle at 24% -10%,#ffffff 0,transparent 42%),#eef2f3}
+h1{color:#17242b}h1 em{color:#657982}.eyebrow,.section-kicker{color:#6c858d}
+.project-meta,.bim-mode .panel,.workflow-panel,.section-tool,.site-tool,.view-switch,.status{background:#fffffff2;border-color:#cbd7db;box-shadow:0 14px 35px #5268711a}
+.project-meta b,.workflow-head h2,.ifc-selection strong{color:#16252b}.project-meta span,.status{color:#667d85}
+.data-hub .stage,.bim-mode .stage{background:#f4f6f7;border-color:#c7d4d8;box-shadow:0 28px 70px #52687124}
+.workflow-tabs button,.view-switch button,.section-tool button,.site-tool button,.layer-toggles button,.date-switch button,.all-shadows,.structure-actions button{background:#f2f5f6;border-color:#c8d5d9;color:#61777e}
+.workflow-tabs button.on,.view-switch button.on,.section-tool button.on{background:#1b2b31;color:#fff;border-color:#1b2b31}
+.field-group,.mapping-field,.tree-row,.doc-links a,.sun-metrics div{background:#f8fafb;border-color:#d4dee1}
+.field-group h3{background:#e9eff1;color:#597078}.mapping-field span,.mapping-field small,.mapping-field code,.tree-row small{color:#71858b}.mapping-field b,.tree-row b{color:#1a292f}
+.identity-card,.export-score{background:linear-gradient(135deg,#edf5f3,#f7faf9);border-color:#b9d1ca}.identity-card strong,.export-score strong{color:#19785f}
+.gps-fields input{background:#fff;border-color:#c7d4d8;color:#1c2b31}.solar-analysis,.ifc-selection{border-color:#d2dde0}
+.legend,footer{color:#607780}.site-tool>small,.parcel-result span,.parcel-result small{color:#657d83}
+.sheet-target{background:#e5f3ef;border-color:#b8d8cf;color:#247c65}.mapping-note,.import-match{background:#eef5f3}
