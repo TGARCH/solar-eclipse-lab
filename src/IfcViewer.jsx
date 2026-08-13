@@ -171,8 +171,8 @@ export default function IfcViewer({ selectedId, onSelect, onState, sectionPlane,
     const lat=Number(gps.lat)||52.25,lon=Number(gps.lon)||21
     const hours=solar.all?Array.from({length:11},(_,i)=>i+7):[solar.hour]
     const offset=solar.date==='03-21'?'+01:00':'+02:00'
-    return hours.map(hour=>{const date=new Date(`2026-${solar.date}T${String(hour).padStart(2,'0')}:00:00${offset}`),p=SunCalc.getPosition(date,lat,lon),r=32*Math.cos(p.altitude);return {hour,altitude:p.altitude,azimuth:p.azimuth,position:[Math.sin(p.azimuth)*r,Math.max(1,32*Math.sin(p.altitude)),Math.cos(p.azimuth)*r]}}).filter(s=>s.altitude>0)
-  },[gps.lat,gps.lon,solar])
+    return hours.map(hour=>{const date=new Date(`2026-${solar.date}T${String(hour).padStart(2,'0')}:00:00${offset}`),p=SunCalc.getPosition(date,lat,lon),r=32*Math.cos(p.altitude),x=Math.sin(p.azimuth)*r,z=Math.cos(p.azimuth)*r,rotation=THREE.MathUtils.degToRad(siteRotation),cos=Math.cos(rotation),sin=Math.sin(rotation);return {hour,altitude:p.altitude,azimuth:p.azimuth,position:[x*cos+z*sin,Math.max(1,32*Math.sin(p.altitude)),-x*sin+z*cos]}}).filter(s=>s.altitude>0)
+  },[gps.lat,gps.lon,solar,siteRotation])
   const gpsFrameKey=`${Number(gps.lat).toFixed(8)}:${Number(gps.lon).toFixed(8)}:${mapSize}`
   const shadowExtent=Math.max(20,mapSize*.52),ruler=mapSize>=500?100:mapSize>=250?50:10
   const target=useMemo(()=>new THREE.Vector3(0,viewMode==='site'?0:(model?.userData.targetY||1),0),[viewMode,model])
